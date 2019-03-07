@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CORES=5
+CORES=(getconf _NPROCESSORS_ONLN)+1
 
 #install binutils
 
