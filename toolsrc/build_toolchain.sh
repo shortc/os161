@@ -34,8 +34,6 @@ gmake -j $CORES
 gmake install
 cd ..
 
-export CPLUS_INCLUDE_PATH=$INCP
-
 #install gdb
 
 cd gdb-7.8+os161-2.1
@@ -46,3 +44,4 @@ make
 make install
 cd ..
 
+export CPLUS_INCLUDE_PATH=$INCP
