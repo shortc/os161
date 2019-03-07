@@ -1,2 +1,2 @@
-# os161_base
+# os161
 Base repository for OS161
