@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CORES=(getconf _NPROCESSORS_ONLN)+1
+CORES=$(getconf _NPROCESSORS_ONLN)
 
 #install binutils
 
@@ -35,3 +35,14 @@ gmake install
 cd ..
 
 export CPLUS_INCLUDE_PATH=$INCP
+
+#install gdb
+
+cd gdb-7.8+os161-2.1
+find . -name '*.info' | xargs touch
+touch intl/plural.c
+./configure --target=mips-harvard-os161 --prefix=$HOME/os161/tools
+make
+make install
+cd ..
+
