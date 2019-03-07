@@ -15,6 +15,7 @@ cd ..
 cd gcc-4.8.3+os161-2.1
 find . -name '*.info' | xargs touch
 touch intl/plural.c
+cd ..
 
 cd buildgcc
 ../gcc-4.8.3+os161-2.1/configure \
