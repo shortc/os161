@@ -40,7 +40,7 @@ cd gdb-7.8+os161-2.1
 find . -name '*.info' | xargs touch
 touch intl/plural.c
 ./configure --target=mips-harvard-os161 --prefix=$HOME/os161/tools
-make
+make -j $CORES
 make install
 cd ..
 
