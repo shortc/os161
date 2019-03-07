@@ -1,6 +1,6 @@
 #!/bin/sh
 
-$CORES=5
+CORES=5
 
 #install binutils
 
@@ -25,7 +25,7 @@ cd buildgcc
   --disable-libstdcxx --disable-nls \
   --target=mips-harvard-os161 \
   --prefix=$HOME/os161/tools
-gmake
+gmake -j $CORES
 gmake install
 cd ..
 
