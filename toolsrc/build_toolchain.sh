@@ -12,6 +12,11 @@ make -j $CORES
 make install
 cd ..
 
+#install gcc
+
+INCP=$CPLUS_INCLUDE_PATH
+unset CPLUS_INCLUDE_PATH
+
 cd gcc-4.8.3+os161-2.1
 find . -name '*.info' | xargs touch
 touch intl/plural.c
@@ -29,5 +34,4 @@ gmake -j $CORES
 gmake install
 cd ..
 
-
-
+export CPLUS_INCLUDE_PATH=$INCP
