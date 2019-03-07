@@ -13,6 +13,7 @@
 #     9. if we need -D_GNU_SOURCE or similar
 #
 
+CPU=""
 if [ -f doc/lamebus.html ]; then
     SRCDIR=""
 else
