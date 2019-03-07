@@ -16,3 +16,17 @@ cd gcc-4.8.3+os161-2.1
 find . -name '*.info' | xargs touch
 touch intl/plural.c
 
+cd buildgcc
+../gcc-4.8.3+os161-2.1/configure \
+  --enable-languages=c,lto \
+  --nfp --disable-shared --disable-threads \
+  --disable-libmudflap --disable-libssp \
+  --disable-libstdcxx --disable-nls \
+  --target=mips-harvard-os161 \
+  --prefix=$HOME/os161/tools
+gmake
+gmake install
+cd ..
+
+
+
