@@ -45,3 +45,11 @@ make install
 cd ..
 
 export CPLUS_INCLUDE_PATH=$INCP
+
+#install system 161
+
+cd sys161-1.99.09
+./configure --prefix=$HOME/os161/tools mipseb
+make -j $CORES
+make install
+cd ..
