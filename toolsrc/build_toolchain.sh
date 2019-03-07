@@ -53,3 +53,18 @@ cd sys161-2.0.8
 make -j $CORES
 make install
 cd ..
+
+cd bmake
+./configure --prefix=$HOME/os161/tools --with-default-sys-path=$HOME/os161/tools/share/mk
+sh ./make-bootstrap.sh
+mkdir -p $HOME/os161/tools/bin
+mkdir -p $HOME/os161/tools/share/man/man1
+mkdir -p $HOME/os161/tools/share/mk
+cp bmake $HOME/os161/tools/bin/
+cp bmake.1 $HOME/os161/tools/share/man/man1/
+sh mk/install-mk $HOME/os161/tools/share/mk
+cd ..
+
+pushd $HOME/os161/tools/bin
+sh -c 'for i in mips-*; do ln -s $i os161-`echo $i | cut -d- -f4-`; done'
+popd
