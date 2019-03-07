@@ -43,7 +43,7 @@
 *.pdb
 
 # Kernel Module Compile Results
-*.mod*
+# *.mod* prevents addint modula2 Makefile for gdb
 *.cmd
 .tmp_versions/
 modules.order
