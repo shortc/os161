@@ -80,6 +80,7 @@ struct lock {
 	//WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 	struct wchan *lock_wchan;		
 	struct spinlock lock_lock;		
+	//Some way to keep track of the thread that owns it.
 	//WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
         
 	// (don't forget to mark things volatile as needed)
