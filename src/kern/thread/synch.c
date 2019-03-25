@@ -247,15 +247,19 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
-        // Write this
-        (void)cv;    // suppress warning until code gets written
-        (void)lock;  // suppress warning until code gets written
+    // Write this
+	wchan_sleep(cv->cv_wchan, cv->cv_lock);
+
+	(void)cv;    // suppress warning until code gets written
+    (void)lock;  // suppress warning until code gets written
 }
 
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
-        // Write this
+    // Write this
+	wchan_wakeone(cv->cv_wchan, cv->cv_lock);	
+	
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
 }
