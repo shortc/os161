@@ -288,7 +288,7 @@ void
 cv_signal(struct cv *cv, struct lock *lock)
 {
 		// Write this
-		if lock_do_i_hold(lock); {
+		if(lock_do_i_hold(lock)) {
 			wchan_wakeone(cv->cv_wchan, &cv->cv_lock);	
 		}	
 		(void)cv;    // suppress warning until code gets written
@@ -299,7 +299,7 @@ void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
 		// Write this
-		if lock_do_i_hold(lock); {
+		if(lock_do_i_hold(lock)) {
 			wchan_wakeall(cv->cv_wchan, &cv->cv_lock);
 		}
 		(void)cv;    // suppress warning until code gets written
