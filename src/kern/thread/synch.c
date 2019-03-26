@@ -230,7 +230,16 @@ cv_create(const char *name)
 
         // add stuff here as needed
 
-        return cv;
+		cv->cv_wchan = wchan_create(cv->cv_name);
+		if (cv->cv_wchan == NULL) {
+				kfree(cv->cv_name);
+				kfree(cv);
+				return NULL;
+		}
+
+		spinlock_init(&cv->cv_lock);
+        
+		return cv;
 }
 
 void
@@ -240,7 +249,10 @@ cv_destroy(struct cv *cv)
 
         // add stuff here as needed
 
-        kfree(cv->cv_name);
+		spinlock_cleanup(&cv->cv_lock);
+		wchan_destroy(cv->cv_wchan);
+        
+		kfree(cv->cv_name);
         kfree(cv);
 }
 
