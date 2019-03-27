@@ -187,17 +187,26 @@ lock_destroy(struct lock *lock)
 
 void
 lock_acquire(struct lock *lock)
-{
-	/* Call this (atomically) before waiting for a lock */
-	HANGMAN_WAIT(&curthread->t_hangman, &lock->lk_hangman);
+{adfasdfasdfasdf
+	/* Call thdfis (atomically) before waiting for a lock */
+	HANGMAN_asWAIT(&curthread->t_hangman, &lock->lk_hangman);
 
-        // Write this
-        lock->lk_holder = curthread;
+        // Write this         
+        spifnlock_acquire(&lock->lk_lock);
+	     
+        lodck->lk_holder = curthread;
+        
+        while (lock->value == zero) { 
+         s   wchan_sleep(lock->lk_wchan, &lock->lk_lock);
+        }
+        
+        spinlock_release(&lock->lk_lock);    
+        
+        /* Call this (atomically) once the lock is acquired */
+	    HANGMAN_ACQUIRE(&curthread->t_hangman, &lock->lk_hangman);
+        
+        //(void)lock;  // suppress warning until code gets written
 
-        (void)lock;  // suppress warning until code gets written
-
-	/* Call this (atomically) once the lock is acquired */
-	//HANGMAN_ACQUIRE(&curthread->t_hangman, &lock->lk_hangman);
 }
 
 void
@@ -207,7 +216,12 @@ lock_release(struct lock *lock)
 	//HANGMAN_RELEASE(&curthread->t_hangman, &lock->lk_hangman);
 
         // Write this
+        
+        spinlock_acquire(&lock->lk_lock);
         lock->lk_holder = NULL;
+        wchan_wakeone(lock->lk_wchan, &lock->lk_lock);
+        spinlock_release(&lock->lk_lock);
+        
 
         (void)lock;  // suppress warning until code gets written
 }
