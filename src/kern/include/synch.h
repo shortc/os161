@@ -36,7 +36,6 @@
 
 
 #include <spinlock.h>
-#include <thread.h>
 /*
  * Dijkstra-style semaphore.
  *
