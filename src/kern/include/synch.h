@@ -123,8 +123,8 @@ struct cv {
 		// (don't forget to mark things volatile as needed)
 	
 		struct wchan *cv_wchan;
-		//struct spinlock cv_lock;
-        //volatile enum { zero, one } value;
+        volatile unsigned num_sl_threads;
+		//volatile enum { zero, one } value;
 };
 
 struct cv *cv_create(const char *name);
