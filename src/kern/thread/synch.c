@@ -196,9 +196,11 @@ lock_acquire(struct lock *lock)
 	     
         lock->lk_holder = curthread;
         
-        while (lock->value == zero) { 
-			  
-				wchan_sleep(lock->lk_wchan, &lock->lk_lock);
+        if (lock->value == one) {
+            lock->value = zero;
+        }
+        else {
+            wchan_sleep(lock->lk_wchan, &lock->lk_lock);
         }
         
         spinlock_release(&lock->lk_lock);    
@@ -219,12 +221,13 @@ lock_release(struct lock *lock)
         // Write this
         
         spinlock_acquire(&lock->lk_lock);
-        lock->lk_holder = NULL;
-        wchan_wakeone(lock->lk_wchan, &lock->lk_lock);
+            lock->lk_holder = NULL;
+            lock->value = one;
+            wchan_wakeone(lock->lk_wchan, &lock->lk_lock);
         spinlock_release(&lock->lk_lock);
         
 
-        (void)lock;  // suppress warning until code gets written
+        //(void)lock;  // suppress warning until code gets written
 }
 
 bool
