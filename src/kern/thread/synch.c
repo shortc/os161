@@ -295,8 +295,6 @@ cv_wait(struct cv *cv, struct lock *lock)
 
 		lock_acquire(lock);
 		spinlock_release(&lock->lk_lock);
-		//(void)cv;    // suppress warning until code gets written
-		//(void)lock;  // suppress warning until code gets written
 }
 
 void
@@ -312,22 +310,17 @@ cv_signal(struct cv *cv, struct lock *lock)
 			cv->num_sl_threads--;
 			wchan_wakeone(cv->cv_wchan, &lock->lk_lock);	
 		}
-
-		//(void)cv;    // suppress warning until code gets written
-		//(void)lock;  // suppress warning until code gets written
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
-{
-		// Write this
-	//HELLO!	
+{	
 		KASSERT(lock_do_i_hold(lock));
-		KASSERT(curthread->t_in_interrupt == false);
 		KASSERT(cv != NULL);
-		KASSERT(lock != NULL);
+		KASSERT(lock != NULL);		
+		//And maybe
+		KASSERT(curthread->t_in_interrupt == false);
+		
 		wchan_wakeall(cv->cv_wchan, &lock->lk_lock);
 		cv->num_sl_threads = 0;	
-		//(void)cv;    // suppress warning until code gets written
-		//(void)lock;  // suppress warning until code gets written
 }
