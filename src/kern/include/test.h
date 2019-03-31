@@ -36,6 +36,9 @@
  */
 
 
+/* This is only actually available if OPT_SYNCHPROBS is set. */
+int whalemating(int, char **);
+
 /*
  * Test code.
  */

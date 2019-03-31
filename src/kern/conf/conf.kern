@@ -427,6 +427,16 @@ defoption netfs
 
 ########################################
 #                                      #
+#  Synchronization problems assignment #
+#                                      #
+########################################
+
+defoption synchprobs
+optfile   synchprobs  synchprobs/whalemating.c
+
+
+########################################
+#                                      #
 #              Test code               #
 #                                      #
 ########################################

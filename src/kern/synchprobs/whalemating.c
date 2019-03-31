@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
+ * Copyright (c) 2001, 2002, 2009
  *	The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,65 +27,79 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _CLOCK_H_
-#define _CLOCK_H_
-
 /*
- * Time-related definitions.
+ * Driver code for whale mating problem
  */
+#include <types.h>
+#include <lib.h>
+#include <thread.h>
+#include <test.h>
 
-#include <kern/time.h>
+#define NMATING 10
 
-#include "opt-synchprobs.h"
+static
+void
+male(void *p, unsigned long which)
+{
+	(void)p;
+	kprintf("male whale #%ld starting\n", which);
 
+	// Implement this function
+}
 
-/*
- * hardclock() is called on every CPU HZ times a second, possibly only
- * when the CPU is not idle, for scheduling.
- */
+static
+void
+female(void *p, unsigned long which)
+{
+	(void)p;
+	kprintf("female whale #%ld starting\n", which);
 
-/* hardclocks per second */
-#if OPT_SYNCHPROBS
-/* Make synchronization more exciting :) */
-#define HZ  10000
-#else
-/* More realistic value */
-#define HZ  100
-#endif
+	// Implement this function
+}
 
-void hardclock_bootstrap(void);
-void hardclock(void);
+static
+void
+matchmaker(void *p, unsigned long which)
+{
+	(void)p;
+	kprintf("matchmaker whale #%ld starting\n", which);
 
-/*
- * timerclock() is called on one CPU once a second to allow simple
- * timed operations. (This is a fairly simpleminded interface.)
- */
-void timerclock(void);
-
-/*
- * gettime() may be used to fetch the current time of day.
- */
-void gettime(struct timespec *ret);
-
-/*
- * arithmetic on times
- *
- * add: ret = t1 + t2
- * sub: ret = t1 - t2
- */
-
-void timespec_add(const struct timespec *t1,
-		  const struct timespec *t2,
-		  struct timespec *ret);
-void timespec_sub(const struct timespec *t1,
-		  const struct timespec *t2,
-		  struct timespec *ret);
-
-/*
- * clocksleep() suspends execution for the requested number of seconds,
- * like userlevel sleep(3). (Don't confuse it with wchan_sleep.)
- */
-void clocksleep(int seconds);
+	// Implement this function
+}
 
 
-#endif /* _CLOCK_H_ */
+// Change this function as necessary
+int
+whalemating(int nargs, char **args)
+{
+
+	int i, j, err=0;
+
+	(void)nargs;
+	(void)args;
+
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < NMATING; j++) {
+			switch(i) {
+			    case 0:
+				err = thread_fork("Male Whale Thread",
+						  NULL, male, NULL, j);
+				break;
+			    case 1:
+				err = thread_fork("Female Whale Thread",
+						  NULL, female, NULL, j);
+				break;
+			    case 2:
+				err = thread_fork("Matchmaker Whale Thread",
+						  NULL, matchmaker, NULL, j);
+				break;
+			}
+			if (err) {
+				panic("whalemating: thread_fork failed: %s)\n",
+				      strerror(err));
+			}
+		}
+	}
+
+	return 0;
+}
