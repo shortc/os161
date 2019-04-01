@@ -67,7 +67,7 @@ sem_create(const char *name, unsigned initial_count)
 		return NULL;
 	}
 
-	spinlock_init(&sem->sem_lock);
+		spinlock_init(&sem->sem_lock);
         sem->sem_count = initial_count;
 
         return sem;
@@ -78,9 +78,9 @@ sem_destroy(struct semaphore *sem)
 {
         KASSERT(sem != NULL);
 
-	/* wchan_cleanup will assert if anyone's waiting on it */
-	spinlock_cleanup(&sem->sem_lock);
-	wchan_destroy(sem->sem_wchan);
+		/* wchan_cleanup will assert if anyone's waiting on it */
+		spinlock_cleanup(&sem->sem_lock);
+		wchan_destroy(sem->sem_wchan);
         kfree(sem->sem_name);
         kfree(sem);
 }
@@ -98,8 +98,8 @@ P(struct semaphore *sem)
          */
         KASSERT(curthread->t_in_interrupt == false);
 
-	/* Use the semaphore spinlock to protect the wchan as well. */
-	spinlock_acquire(&sem->sem_lock);
+		/* Use the semaphore spinlock to protect the wchan as well. */
+		spinlock_acquire(&sem->sem_lock);
         while (sem->sem_count == 0) {
 				/*
 				*
@@ -306,10 +306,12 @@ cv_signal(struct cv *cv, struct lock *lock)
 		//KASSERT(cv->num_sl_threads > 0);
 
 		spinlock_acquire(&lock->lk_lock);
-		if(cv->num_sl_threads > 0) {
-			cv->num_sl_threads--;
-			wchan_wakeone(cv->cv_wchan, &lock->lk_lock);	
-		}
+		wchan_wakeone(cv->cv_wchan, &lock->lk_lock);
+//		if(cv->num_sl_threads > 0) {
+//			cv->num_sl_threads--;
+//			wchan_wakeone(cv->cv_wchan, &lock->lk_lock);	
+//		}
+
 //		while(cv->num_sl_threads < 1) {
 //			if(cv->num_sl_threads > 0) {
 //				cv->num_sl_threads--;
