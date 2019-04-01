@@ -40,6 +40,8 @@
 #include <current.h>
 #include <synch.h>
 
+//#include <stdio.h>
+//#include <stdlib.h>
 ////////////////////////////////////////////////////////////
 //
 // Semaphore.
@@ -237,7 +239,8 @@ lock_do_i_hold(struct lock *lock)
 struct cv *
 cv_create(const char *name)
 {
-        struct cv *cv;
+        kprintf("cv_create called\n");
+		struct cv *cv;
 
         cv = kmalloc(sizeof(*cv));
         if (cv == NULL) {
@@ -260,18 +263,20 @@ cv_create(const char *name)
 		}
 
 		cv->num_sl_threads = 0;
-
+		kprintf("cv %s properly created\n", cv->cv_name);
 		return cv;
 }
 
 void
 cv_destroy(struct cv *cv)
 {
-        KASSERT(cv != NULL);
+        kprintf("cv_destroy called\n");
+		KASSERT(cv != NULL);
 
         // add stuff here as needed
 
 		wchan_destroy(cv->cv_wchan);
+		kprintf("cv %s properly destroyed\n", cv->cv_name);
         
 		kfree(cv->cv_name);
         kfree(cv);
@@ -280,6 +285,7 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
+        kprintf("cv_wait called\n");
 		KASSERT(lock_do_i_hold(lock));
 		KASSERT(cv != NULL);
 		KASSERT(lock != NULL);
@@ -289,6 +295,8 @@ cv_wait(struct cv *cv, struct lock *lock)
 		lock_release(lock);
 		spinlock_acquire(&lock->lk_lock);
 		
+		kprintf("putting cv %s to sleep\n", cv->cv_name);
+		kprintf("There are now %d sleeping threads on this cv\n", cv->num_sl_threads);
 		cv->num_sl_threads++;
 		wchan_sleep(cv->cv_wchan, &lock->lk_lock);
 
@@ -299,6 +307,7 @@ cv_wait(struct cv *cv, struct lock *lock)
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
+		kprintf("cv_signal called\n");
 		KASSERT(lock_do_i_hold(lock));
 		KASSERT(cv != NULL);
 		KASSERT(lock != NULL);
@@ -306,6 +315,7 @@ cv_signal(struct cv *cv, struct lock *lock)
 		//KASSERT(cv->num_sl_threads > 0);
 
 		spinlock_acquire(&lock->lk_lock);
+		kprintf("waking cv %s\n", cv->cv_name);
 		wchan_wakeone(cv->cv_wchan, &lock->lk_lock);
 //		if(cv->num_sl_threads > 0) {
 //			cv->num_sl_threads--;
@@ -324,6 +334,7 @@ cv_signal(struct cv *cv, struct lock *lock)
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {	
+        kprintf("cv_broadcast called\n");
 		KASSERT(lock_do_i_hold(lock));
 		KASSERT(cv != NULL);
 		KASSERT(lock != NULL);		
