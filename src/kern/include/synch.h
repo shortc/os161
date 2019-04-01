@@ -121,6 +121,7 @@ struct cv {
 		// add what you need here
 		// (don't forget to mark things volatile as needed)
 		struct wchan *cv_wchan;
+        struct spinlock cv_lock;
         volatile unsigned num_sl_threads;
 };
 
