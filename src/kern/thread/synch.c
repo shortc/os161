@@ -178,7 +178,7 @@ lock_destroy(struct lock *lock)
         KASSERT(lock != NULL);
 
         // add stuff here as needed
-        KASSERT(lock->lk_holder = NULL); // This may only be needed if not implementing spinlocks
+        KASSERT(lock->lk_holder == NULL); // This may only be needed if not implementing spinlocks
 
 	    spinlock_cleanup(&lock->lk_lock);
 	    wchan_destroy(lock->lk_wchan);
@@ -189,8 +189,6 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock) 
 {
-        KASSERT(lock != NULL);
-        
         spinlock_acquire(&lock->lk_lock);
         
         /* Call this (atomically) before waiting for a lock */
@@ -211,10 +209,10 @@ lock_acquire(struct lock *lock)
 void
 lock_release(struct lock *lock)
 {
-        KASSERT(lock != NULL); 
+        spinlock_acquire(&lock->lk_lock);  
+        
         KASSERT(lock->lk_holder == curthread);
 
-        spinlock_acquire(&lock->lk_lock); 
         lock->lk_holder = NULL;
     
         /* Call this (atomically) when the lock is released */
@@ -238,7 +236,6 @@ lock_do_i_hold(struct lock *lock)
 struct cv *
 cv_create(const char *name)
 {
-        if(DB) {kprintf("cv_create called\n");}
 		struct cv *cv;
 
         cv = kmalloc(sizeof(*cv));
@@ -265,20 +262,18 @@ cv_create(const char *name)
 		
         spinlock_init(&cv->cv_lock);
 		
-		if(DB) {kprintf("cv %s properly created\n", cv->cv_name);}
 		return cv;
 }
 
 void
 cv_destroy(struct cv *cv)
 {
-        if(DB) {kprintf("cv_destroy called\n");}
 		KASSERT(cv != NULL);
 
         // add stuff here as needed
-
+        
+	    spinlock_cleanup(&cv->cv_lock);
 		wchan_destroy(cv->cv_wchan);
-		if(DB) {kprintf("cv %s properly destroyed\n", cv->cv_name);}
         
 		kfree(cv->cv_name);
         kfree(cv);
@@ -286,68 +281,36 @@ cv_destroy(struct cv *cv)
 
 void
 cv_wait(struct cv *cv, struct lock *lock)
-{
-        if(DB) {kprintf("cv_wait called\n");}
-		KASSERT(cv != NULL);
-		KASSERT(lock != NULL);
-		//and maybe...
-		KASSERT(curthread->t_in_interrupt == false);
-
-
-		spinlock_acquire(&lock->lk_lock);
-		
-		KASSERT(lock_do_i_hold(lock));
+{ 
+        spinlock_acquire(&cv->cv_lock);
 		
 		lock_release(lock);
 		
-		if(DB) {kprintf("putting cv %s to sleep\n", cv->cv_name);}
-		if(DB) {kprintf("There are now %d sleeping threads on this cv\n", cv->num_sl_threads);}
-		cv->num_sl_threads++;
-		wchan_sleep(cv->cv_wchan, &lock->lk_lock);
+        KASSERT(curthread->t_in_interrupt == false);
+		KASSERT(lock->lk_holder == NULL);
+		
+		wchan_sleep(cv->cv_wchan, &cv->cv_lock);
+
+		spinlock_release(&cv->cv_lock);
 
 		lock_acquire(lock);
-		spinlock_release(&lock->lk_lock);
-
 
 }
 
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
-		if(DB) {kprintf("cv_signal called\n");}
-		KASSERT(lock_do_i_hold(lock));
-		KASSERT(cv != NULL);
-		KASSERT(lock != NULL);
-		//maybe...
-		//KASSERT(cv->num_sl_threads > 0);
-
-		spinlock_acquire(&lock->lk_lock);
-		if(DB) {kprintf("waking cv %s\n", cv->cv_name);}
-		wchan_wakeone(cv->cv_wchan, &lock->lk_lock);
-//		if(cv->num_sl_threads > 0) {
-//			cv->num_sl_threads--;
-//			wchan_wakeone(cv->cv_wchan, &lock->lk_lock);	
-//		}
-
-//		while(cv->num_sl_threads < 1) {
-//			if(cv->num_sl_threads > 0) {
-//				cv->num_sl_threads--;
-//				wchan_wakeone(cv->cv_wchan, &lock->lk_lock);	
-//			}
-//		}
-		spinlock_release(&lock->lk_lock);
+        spinlock_acquire(&cv->cv_lock);	
+        KASSERT(lock_do_i_hold(lock));
+		wchan_wakeone(cv->cv_wchan, &cv->cv_lock);
+		spinlock_release(&cv->cv_lock);
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {	
-        if(DB) {kprintf("cv_broadcast called\n");}
+		spinlock_acquire(&cv->cv_lock);
 		KASSERT(lock_do_i_hold(lock));
-		KASSERT(cv != NULL);
-		KASSERT(lock != NULL);		
-		
-		spinlock_acquire(&lock->lk_lock);
-		wchan_wakeall(cv->cv_wchan, &lock->lk_lock);
-		cv->num_sl_threads = 0;	
-		spinlock_release(&lock->lk_lock);
+		wchan_wakeall(cv->cv_wchan, &cv->cv_lock);
+		spinlock_release(&cv->cv_lock);
 }
