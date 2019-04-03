@@ -34,8 +34,13 @@
 #include <lib.h>
 #include <thread.h>
 #include <test.h>
+#include <synch.h>
 
 #define NMATING 10
+
+static struct cv *testcvs[NMATING];
+static struct lock *testlocks[NMATING];
+
 
 static
 void
@@ -43,7 +48,6 @@ male(void *p, unsigned long which)
 {
 	(void)p;
 	kprintf("male whale #%ld starting\n", which);
-
 	// Implement this function
 }
 
@@ -52,9 +56,11 @@ void
 female(void *p, unsigned long which)
 {
 	(void)p;
+	lock_acquire(testlocks[1]);
 	kprintf("female whale #%ld starting\n", which);
 
 	// Implement this function
+	lock_release(testlocks[1]);
 }
 
 static
@@ -62,9 +68,14 @@ void
 matchmaker(void *p, unsigned long which)
 {
 	(void)p;
+	
+	lock_acquire(testlocks[0]);
 	kprintf("matchmaker whale #%ld starting\n", which);
 
 	// Implement this function
+
+
+	lock_release(testlocks[0]);
 }
 
 
@@ -74,7 +85,17 @@ whalemating(int nargs, char **args)
 {
 
 	int i, j, err=0;
+	
 
+	
+	kprintf("nargs is %d\n", nargs);
+
+	testcvs[0] = cv_create("wow");
+	testlocks[0] = lock_create("crazy");
+
+	testlocks[1] = lock_create("cray");
+	
+	
 	(void)nargs;
 	(void)args;
 
@@ -82,6 +103,7 @@ whalemating(int nargs, char **args)
 		for (j = 0; j < NMATING; j++) {
 			switch(i) {
 			    case 0:
+				
 				err = thread_fork("Male Whale Thread",
 						  NULL, male, NULL, j);
 				break;
