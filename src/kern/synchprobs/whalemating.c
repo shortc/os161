@@ -38,17 +38,29 @@
 
 #define NMATING 10
 
-static struct cv *testcvs[NMATING];
-static struct lock *testlocks[NMATING];
-
+static struct cv *cvs[NMATING];
+static struct lock *locks[NMATING];
+int ready_males; 
+int ready_females; 
 
 static
 void
 male(void *p, unsigned long which)
 {
 	(void)p;
-	kprintf("male whale #%ld starting\n", which);
+	kprintf(">>> male whale #%ld starting\n", which);
+	lock_acquire(locks[0]);
+	kprintf("*** male whale #%ld mating\n", which);
+
+	ready_males++;
+	
+	cv_signal(cvs[2], locks[0]);
+	cv_wait(cvs[0], locks[0]);
+
+
 	// Implement this function
+	lock_release(locks[0]);
+	kprintf("<<< male whale #%ld exiting\n", which);
 }
 
 static
@@ -56,11 +68,18 @@ void
 female(void *p, unsigned long which)
 {
 	(void)p;
-	lock_acquire(testlocks[1]);
-	kprintf("female whale #%ld starting\n", which);
+	kprintf(">>> female whale #%ld starting\n", which);
+	lock_acquire(locks[0]);
+	kprintf("*** female whale #%ld mating\n", which);
 
-	// Implement this function
-	lock_release(testlocks[1]);
+	ready_females++;
+	
+	cv_signal(cvs[2], locks[0]);
+	cv_wait(cvs[1], locks[0]);
+	ready_females--;
+
+	lock_release(locks[0]);
+	kprintf("<<< female whale #%ld exiting\n", which);
 }
 
 static
@@ -68,14 +87,18 @@ void
 matchmaker(void *p, unsigned long which)
 {
 	(void)p;
+	kprintf(">>> matchmaker whale #%ld starting\n", which);
 	
-	lock_acquire(testlocks[0]);
-	kprintf("matchmaker whale #%ld starting\n", which);
-
-	// Implement this function
+	lock_acquire(locks[0]);
+	kprintf("*** female whale #%ld mating\n", which);
 
 
-	lock_release(testlocks[0]);
+	while(ready_males == 0 || ready_females == 0) {
+		cv_wait(cvs[2], locks[0]);
+	}
+
+	lock_release(locks[0]);
+	kprintf("<<< female whale #%ld exiting\n", which);
 }
 
 
@@ -90,10 +113,14 @@ whalemating(int nargs, char **args)
 	
 	kprintf("nargs is %d\n", nargs);
 
-	testcvs[0] = cv_create("wow");
-	testlocks[0] = lock_create("crazy");
+	cvs[0] = cv_create("male");
+	cvs[1] = cv_create("female");
+	cvs[2] = cv_create("matchmaker");
 
-	testlocks[1] = lock_create("cray");
+	locks[0] = lock_create("crazy");
+	
+	ready_males = 0;
+	ready_females = 0;
 	
 	
 	(void)nargs;
