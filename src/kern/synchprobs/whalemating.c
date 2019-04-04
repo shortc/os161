@@ -34,37 +34,58 @@
 #include <lib.h>
 #include <thread.h>
 #include <test.h>
+#include <synch.h>
 
 #define NMATING 10
+
+
 
 static
 void
 male(void *p, unsigned long which)
 {
-	(void)p;
 	kprintf("male whale #%ld starting\n", which);
+    
+    lock_acquire(whale_lock)
+    
+    if (lock_do_i_hold(whale_lock)) {
+        male_count++;
+        cv_signal(mm_cv, whale_lock);
+        cv_wait(male_cv, whale_lock);
+    }
 
-	// Implement this function
+    male_count--;
 }
 
 static
 void
 female(void *p, unsigned long which)
 {
-	(void)p;
 	kprintf("female whale #%ld starting\n", which);
+    
+    lock_acquire(whale_lock);
 
-	// Implement this function
+    if (lock_do_i_hold(hale_lock)) {
+        female_count++;
+        cv_signal(mm_cv, whale_lock);
+        cv_wait(female_cv, whale_lock);
+    }
+
+    female_count--;
+
 }
 
 static
 void
 matchmaker(void *p, unsigned long which)
 {
-	(void)p;
 	kprintf("matchmaker whale #%ld starting\n", which);
 
-	// Implement this function
+    if (male_count > 0 && female_count > 0) {
+        cv_signal(male_cv, whale_lock);
+        cv_signal(female_cv, whale_lock);
+    }
+
 }
 
 
@@ -72,6 +93,14 @@ matchmaker(void *p, unsigned long which)
 int
 whalemating(int nargs, char **args)
 {
+    
+    struct male_cv = cv_create("male_cv");
+    struct female_cv = cv_create("female_cv");
+    struct mm_cv = cv_create("mm_cv");
+    struct whale_lock = lock_create("whale_lock");
+    int male_count = 0;
+    int female_count = 0;
+    int mm_count = 0;
 
 	int i, j, err=0;
 
