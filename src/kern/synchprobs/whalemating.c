@@ -38,37 +38,44 @@
 
 #define NMATING 10
 
-static struct cv *cvs[NMATING];
-static struct lock *locks[NMATING];
-int *ready_males; 
-int *ready_females; 
-int *male_indices[NMATING];
-int *female_indices[NMATING];
-int *male_index;
-int *female_index;
-int *matchmaker_index;
+
+typedef struct whale_guts{
+    struct cv *cvs[NMATING];
+    struct lock *lock;
+    int ready_males; 
+    int ready_females; 
+    int male_indices[NMATING];
+    int female_indices[NMATING];
+    int male_index;
+    int female_index;
+    int matchmaker_index;
+} whale_guts;
 
 static
 void
 male(void *p, unsigned long which)
 {
-	(void)p;
 
-	lock_acquire(locks[0]);
+    
+	kprintf("hi\n");
+    whale_guts *guts = (whale_guts *)p;
+
+	kprintf("hi\n");
+    lock_acquire(guts->lock);
 	kprintf(">>> male whale #%ld starting\n", which);
 
 
-	ready_males++;
-	male_indices[male_index] = which;
-	male_index++;
+	guts->ready_males++;
+    guts->male_indices[guts->male_index] = which;
+	guts->male_index++;
 
-	cv_signal(cvs[2], locks[0]);
-	cv_wait(cvs[0], locks[0]);
+	cv_signal(guts->cvs[2], guts->lock);
+	cv_wait(guts->cvs[0], guts->lock);
 	kprintf("*** male whale #%ld mating\n", which);
-	ready_males--;
+	guts->ready_males--;
 
 	kprintf("<<< male whale #%ld exiting\n", which);
-	lock_release(locks[0]);
+	lock_release(guts->lock);
 
 }
 
@@ -76,23 +83,27 @@ static
 void
 female(void *p, unsigned long which)
 {
-	(void)p;
+   
+	kprintf("hi fe\n");
+    whale_guts *guts = (whale_guts *)p;
 
-	lock_acquire(locks[0]);
+	kprintf("hi fe\n");
+
+    lock_acquire(guts->lock);
 	kprintf(">>> female whale #%ld starting\n", which);
 
 
-	ready_females++;
-	female_indices[female_index] = which;
-	female_index++;
+	guts->ready_females++;
+	guts->female_indices[guts->female_index] = which;
+	guts->female_index++;
 
-	cv_signal(cvs[2], locks[0]);
-	cv_wait(cvs[1], locks[0]);
+	cv_signal(guts->cvs[2], guts->lock);
+	cv_wait(guts->cvs[1], guts->lock);
 	kprintf("*** female whale #%ld mating\n", which);
-	ready_females--;
+	guts->ready_females--;
 
 	kprintf("<<< female whale #%ld exiting\n", which);
-	lock_release(locks[0]);
+	lock_release(guts->lock);
 
 }
 
@@ -100,27 +111,31 @@ static
 void
 matchmaker(void *p, unsigned long which)
 {
-	(void)p;
-	kprintf(">>> matchmaker whale #%ld starting\n", which);
+
+	kprintf("hi mm\n");
+    whale_guts *guts = (whale_guts *)p;
+	kprintf("hi mm\n");
 	
-	lock_acquire(locks[0]);
+    kprintf(">>> matchmaker whale #%ld starting\n", which);
+	
+	lock_acquire(guts->lock);
 
 
-	while(ready_males == 0 || ready_females == 0) {
-		cv_wait(cvs[2], locks[0]);
+	while(guts->ready_males == 0 || guts->ready_females == 0) {
+		cv_wait(guts->cvs[2], guts->lock);
 	}
 	
 
-	matchmaker_index++;
-	cv_signal(cvs[0], locks[0]);
-	cv_signal(cvs[1], locks[0]);
+	guts->matchmaker_index++;
+	cv_signal(guts->cvs[0], guts->lock);
+	cv_signal(guts->cvs[1], guts->lock);
 	
-	kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, male_indices[matchmaker_index], female_indices[matchmaker_index]);
+	kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, guts->male_indices[guts->matchmaker_index], guts->female_indices[guts->matchmaker_index]);
 
 	kprintf("!!! Mating done!\n");
 	
 	kprintf("<<< matchmaker whale #%ld exiting\n", which);
-	lock_release(locks[0]);
+	lock_release(guts->lock);
 
 }
 
@@ -131,24 +146,30 @@ whalemating(int nargs, char **args)
 {
 
 	int i, j, err=0;
-	
+
+
+    whale_guts *guts = (whale_guts *) kmalloc(10000 * sizeof(whale_guts *));
+
 
 	
 	kprintf("nargs is %d\n", nargs);
 
-	cvs[0] = cv_create("male");
-	cvs[1] = cv_create("female");
-	cvs[2] = cv_create("matchmaker");
+	guts->cvs[0] = cv_create("male");
+	//guts->male_cv = cv_create("male");
+    kprintf("male cv created\n");
+	guts->cvs[1] = cv_create("female");
+	guts->cvs[2] = cv_create("matchmaker");
 
-	locks[0] = lock_create("crazy");
+	guts->lock = lock_create("crazy");
 	
-	ready_males = 0;
-	ready_females = 0;
+	guts->ready_males = 0;
+	guts->ready_females = 0;
 	
-	male_index = 0;
-	female_index = 0;
-	matchmaker_index = 0;
+	guts->male_index = 0;
+	guts->female_index = 0;
+	guts->matchmaker_index = 0;
 	
+    kprintf("male cv created\n");
 	(void)nargs;
 	(void)args;
 
@@ -158,15 +179,15 @@ whalemating(int nargs, char **args)
 			    case 0:
 				
 				err = thread_fork("Male Whale Thread",
-						  NULL, male, NULL, j);
+						  NULL, male, (void *)&guts, j);
 				break;
 			    case 1:
 				err = thread_fork("Female Whale Thread",
-						  NULL, female, NULL, j);
+						  NULL, female, (void *)&guts, j);
 				break;
 			    case 2:
 				err = thread_fork("Matchmaker Whale Thread",
-						  NULL, matchmaker, NULL, j);
+						  NULL, matchmaker, (void *)&guts, j);
 				break;
 			}
 			if (err) {
