@@ -40,21 +40,22 @@
 
 static struct cv *cvs[NMATING];
 static struct lock *locks[NMATING];
-int ready_males; 
-int ready_females; 
-int male_indices[NMATING];
-int female_indices[NMATING];
-int male_index;
-int female_index;
-int matchmaker_index;
+int *ready_males; 
+int *ready_females; 
+int *male_indices[NMATING];
+int *female_indices[NMATING];
+int *male_index;
+int *female_index;
+int *matchmaker_index;
 
 static
 void
 male(void *p, unsigned long which)
 {
 	(void)p;
-	kprintf(">>> male whale #%ld starting\n", which);
+
 	lock_acquire(locks[0]);
+	kprintf(">>> male whale #%ld starting\n", which);
 
 
 	ready_males++;
@@ -76,8 +77,9 @@ void
 female(void *p, unsigned long which)
 {
 	(void)p;
-	kprintf(">>> female whale #%ld starting\n", which);
+
 	lock_acquire(locks[0]);
+	kprintf(">>> female whale #%ld starting\n", which);
 
 
 	ready_females++;
@@ -108,10 +110,12 @@ matchmaker(void *p, unsigned long which)
 		cv_wait(cvs[2], locks[0]);
 	}
 	
-	kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, male_indices[matchmaker_index], female_indices[matchmaker_index]);
+
 	matchmaker_index++;
 	cv_signal(cvs[0], locks[0]);
 	cv_signal(cvs[1], locks[0]);
+	
+	kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, male_indices[matchmaker_index], female_indices[matchmaker_index]);
 
 	kprintf("!!! Mating done!\n");
 	
