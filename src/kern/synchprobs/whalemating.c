@@ -148,7 +148,7 @@ whalemating(int nargs, char **args)
 	int i, j, err=0;
 
 
-    whale_guts *guts = (whale_guts *) kmalloc(10000 * sizeof(whale_guts *));
+    whale_guts *guts = (whale_guts *) kmalloc(sizeof(whale_guts));
 
 
 	
