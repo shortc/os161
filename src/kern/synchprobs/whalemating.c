@@ -39,7 +39,7 @@
 #define NMATING 10
 
 
-typedef struct whale_guts{
+typedef struct {
     struct cv *mmstarting_cv;
     struct cv *mm_cv;
     struct cv *m_cv;
@@ -51,6 +51,7 @@ typedef struct whale_guts{
 
     struct lock *lock;
     int num_mating;
+    int ready_mm;
     int ready_males;
     int ready_females;
     int mating_males;
@@ -129,16 +130,14 @@ matchmaker(void *p, unsigned long which)
     lock_acquire(guts->lock);
     kprintf(">>> matchmaker whale #%ld starting\n", which);
 
-    if(guts->mmstarting_cv->num_sl_threads > 1) {
-        cv_wait(guts->mmstarting_cv, guts->lock);
-    }
+    // guts->ready_mm++;
+    // if(guts->ready_mm > 1) {
+    //     cv_wait(guts->mmstarting_cv, guts->lock);
+    // }
 
 	while(guts->m_cv->num_sl_threads == 0 || guts->f_cv->num_sl_threads == 0) {
 		cv_wait(guts->mm_cv, guts->lock);
 	}
-
-
-	guts->matchmaker_index++;
 
 	cv_signal(guts->m_cv, guts->lock);
 	cv_signal(guts->f_cv, guts->lock);
@@ -147,17 +146,21 @@ matchmaker(void *p, unsigned long which)
         cv_wait(guts->mm_cv, guts->lock);
     }
 
-    guts->num_mating = guts->num_mating - 2;
-
-	kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, guts->male_indices[guts->matchmaker_index], guts->female_indices[guts->matchmaker_index]);
-	kprintf("!!! Mating done!\n");
+    guts->num_mating--;
+    guts->num_mating--;
 
     cv_signal(guts->mmating_cv, guts->lock);
 	cv_signal(guts->fmating_cv, guts->lock);
 
-    if(guts->mmstarting_cv->num_sl_threads > 0) {
-        cv_signal(guts->mmstarting_cv, guts->lock);
-    }
+    kprintf("*** matchmaker whale #%ld helping #%d and #%d\n", which, guts->male_indices[guts->matchmaker_index], guts->female_indices[guts->matchmaker_index]);
+	kprintf("!!! Mating done!\n");
+
+    guts->matchmaker_index++;
+
+    // guts->ready_mm--;
+    // if(guts->ready_mm > 0) {
+    //     cv_signal(guts->mmstarting_cv, guts->lock);
+    // }
 
 	kprintf("<<< matchmaker whale #%ld exiting\n", which);
 	lock_release(guts->lock);
@@ -187,6 +190,8 @@ whalemating(int nargs, char **args)
     guts.fmating_cv = cv_create("female_mating");
 
 	guts.lock = lock_create("whale_lock");
+
+    guts.ready_mm = 0;
 
 	guts.num_mating = 0;
 	guts.male_index = 0;
