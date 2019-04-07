@@ -171,15 +171,6 @@ matchmaker(void *p, unsigned long which)
 int
 whalemating(int nargs, char **args)
 {
-    
-    struct male_cv = cv_create("male_cv");
-    struct female_cv = cv_create("female_cv");
-    struct mm_cv = cv_create("mm_cv");
-    struct whale_lock = lock_create("whale_lock");
-    int male_count = 0;
-    int female_count = 0;
-    int mm_count = 0;
-
 	int i, j, err=0;
     (void)nargs;
     (void)args;
