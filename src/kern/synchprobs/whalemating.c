@@ -50,6 +50,7 @@ typedef struct {
     struct cv *mmating_cv;
 
     struct lock *lock;
+    int is_first;
     int num_mating;
     int ready_mm;
     int ready_males;
@@ -130,8 +131,20 @@ matchmaker(void *p, unsigned long which)
     lock_acquire(guts->lock);
     kprintf(">>> matchmaker whale #%ld starting\n", which);
 
+
     // guts->ready_mm++;
     // if(guts->ready_mm > 1) {
+    //     cv_wait(guts->mmstarting_cv, guts->lock);
+    // }
+
+    if(guts->is_first == 1) {
+        guts->is_first = 0;
+    }
+    else {
+        cv_wait(guts->mmstarting_cv, guts->lock);
+    }
+
+    // if(guts->mm_cv->num_sl_threads > 0) {
     //     cv_wait(guts->mmstarting_cv, guts->lock);
     // }
 
@@ -161,6 +174,14 @@ matchmaker(void *p, unsigned long which)
     // if(guts->ready_mm > 0) {
     //     cv_signal(guts->mmstarting_cv, guts->lock);
     // }
+
+    // if(guts->mm_cv->num_sl_threads > 0) {
+    //     cv_signal(guts->mmstarting_cv, guts->lock);
+    // }
+
+    if(guts->mmstarting_cv->num_sl_threads > 0) {
+        cv_signal(guts->mmstarting_cv, guts->lock);
+    }
 
 	kprintf("<<< matchmaker whale #%ld exiting\n", which);
 	lock_release(guts->lock);
@@ -192,6 +213,7 @@ whalemating(int nargs, char **args)
 	guts.lock = lock_create("whale_lock");
 
     guts.ready_mm = 0;
+    guts.is_first = 1;
 
 	guts.num_mating = 0;
 	guts.male_index = 0;
