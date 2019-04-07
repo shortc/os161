@@ -50,13 +50,10 @@ typedef struct {
     struct cv *mmating_cv;
 
     struct lock *lock;
+
     int is_first;
     int num_mating;
-    int ready_mm;
-    int ready_males;
-    int ready_females;
-    int mating_males;
-    int mating_females;
+
     int male_indices[NMATING];
     int female_indices[NMATING];
     int male_index;
@@ -131,22 +128,12 @@ matchmaker(void *p, unsigned long which)
     lock_acquire(guts->lock);
     kprintf(">>> matchmaker whale #%ld starting\n", which);
 
-
-    // guts->ready_mm++;
-    // if(guts->ready_mm > 1) {
-    //     cv_wait(guts->mmstarting_cv, guts->lock);
-    // }
-
     if(guts->is_first == 1) {
         guts->is_first = 0;
     }
     else {
         cv_wait(guts->mmstarting_cv, guts->lock);
     }
-
-    // if(guts->mm_cv->num_sl_threads > 0) {
-    //     cv_wait(guts->mmstarting_cv, guts->lock);
-    // }
 
 	while(guts->m_cv->num_sl_threads == 0 || guts->f_cv->num_sl_threads == 0) {
 		cv_wait(guts->mm_cv, guts->lock);
@@ -169,15 +156,6 @@ matchmaker(void *p, unsigned long which)
 	kprintf("!!! Mating done!\n");
 
     guts->matchmaker_index++;
-
-    // guts->ready_mm--;
-    // if(guts->ready_mm > 0) {
-    //     cv_signal(guts->mmstarting_cv, guts->lock);
-    // }
-
-    // if(guts->mm_cv->num_sl_threads > 0) {
-    //     cv_signal(guts->mmstarting_cv, guts->lock);
-    // }
 
     if(guts->mmstarting_cv->num_sl_threads > 0) {
         cv_signal(guts->mmstarting_cv, guts->lock);
@@ -212,9 +190,7 @@ whalemating(int nargs, char **args)
 
 	guts.lock = lock_create("whale_lock");
 
-    guts.ready_mm = 0;
     guts.is_first = 1;
-
 	guts.num_mating = 0;
 	guts.male_index = 0;
 	guts.female_index = 0;
@@ -246,6 +222,10 @@ whalemating(int nargs, char **args)
 		}
 	}
 
+    /*
+     * Semaphore is used to make sure that the main function does not end until
+     * all threads have finished
+     */
     for (i = 0; i < (NMATING * 3); i++) {
         P(sem);
     }
