@@ -1,53 +1,145 @@
 Team: Chris and Wils
 *********************************************************************************
 How we implemented our project:
-	
-PRIMITIVES:
 
-WHALEMATING:
+LOCK PRIMITIVES:
 
+SUMMARY
+	Locks ensure mutual exclusion to the thread that has the lock which means no other thread may obtain that same lock and execute code past its lock_acquire function call.
+
+struct lock
+	The lock struct contains 5 fields. A char pointer name, a hangman deadlock detector tool, a spinlock struct, and a volatile thread struct.
+
+struct lock *lock_create(const char *name) {}
+	In lock_create, a wait channel is created, if the creation fails then the wait channel and lock allocated memory is freed. The lock’s holder is set to NULL since at the creation of a lock no thread should be holding the lock. Lastly, the spinlock is initialized. 
+
+void lock_destroy(srtuct lock *) {}
+	In lock_destroy, it is asserted that the lock exists and that it does not have a holder otherwise the kernel should panic. The lock upon deletion should not have a holder. Then the spinlock is deleted and memory freed/ The wait channel is destroyed and the memory allocated for the lock and the lock’s char array is freed.
+
+void lock_acquire(struct lock *) {}
+	In lock_acquire, the spinlock is first acquired. This function needs to atomic so in order to do that everything in the function should be inside of spinlock_acquire and spinlock_release function calls. HANGMAIN_WAIT is then called before the thread waits for the lock as per its instructions. The thread waits in a while loop that checks to see if the lock has a holder. If it does not have a holder than the thread should sleep until the lock is released and it is its turn to hold the lock. Wchan_sleep is called in the loop which tells the cpu to go idle and in turn sleeps the thread. The thread is then appended to the tail of the wait channel queue. Once the lock does not have a holder and the thread is awoke and can break out of the while loop, the holder of the lock is then set to the current thread (that thread). HANGMAN_ACQUIRE is called after the lock is acquired as per the its instructions and then the spinlock is released. It is crucial that the thread is not interrupted between the while statement and the setting of the lock’s holder, this is one of the reasons why entire lock_acquire function must be atomic and it bookended by spinlock_acquire and spinlock_release.
+
+void lock_release(struct lock *) {}
+	In lock_release, again, the spinlock is first acquired. This function needs to atomic so in order to do that everything in the function should be inside of spinlock_acquire and spinlock_release function calls. It is asserted that the lock’s holder is the current thread calling lock_release otherwise the kernel should panic. The lock is then ‘released’ by setting the lock’s holder NULL. HANGMAN_RELEASE is called after the lock is released as per its instructions. Wchan_wakeone is then called which takes the first sleeping thread in the queue, wakes it, and removes the that thread, which is the head of the queue, from the queue. Lastly, the spinlock is released.
+
+bool lock_do_i_hold(struct lock *) {}
+	In lock_do_i_hold, the spinlock is acquired. This function needs to atomic so in order to do that everything in the function should be inside of spinlock_acquire and spinlock_release function calls. This function simply returns a boolean in which it compares the lock’s holder to the current thread. If they are the same thread then the function returns true.
+
+
+
+CV PRIMITIVES:
+
+SUMMARY
+	Condition variables are constructs that enable mutual exclusion and allow threads to change states based on whether certain conditions are true.
+
+struct cv
+	The cv struct contains 4 fields. A char pointer name, a wait channel struct, a spinlock struct, and a volatile unsigned.
+
+struct cv * cv_create(const char *name) {}
+		cv_create() takes a character name and outputs an initialized control variable. The first thing it does is create an empty cv struct and malloc its memory. Next it sets the condition variable’s name as a copy of the char pointer that was passed into the function. Then it creates its own wait channel. If any of those three operations fails for some reason, it cleans up all previously made fields and returns NULL. Finally it initializes its spinlock, sets the number of threads sleeping on the condition variable equal to 0, and returns the initialized cv struct. 
+
+void cv_destroy(struct cv *cv) {}
+	In cv_destroy a cv struct is passed in and nothing is returned. First it asserts that the cv struct passed in exists. Then it cleans up its spinlock field using spinlock_cleanup() and its wait channel field with wchan_destroy(). Finally it frees the memory assigned cv’s name, and then the memory of the cv itself.
+
+void cv_wait(struct cv *cv, struct lock *lock) {}
+	In cv_wait() a condition variable (cv) and a lock(lock) struct are passed in and nothing is returned. The basic purpose of the function is to put the current thread to sleep waiting on the passed in condition variable. First the condition variable’s spinlock is acquired to ensure mutual exclusivity. Next the passed in lock is released. This is done so that while the thread is asleep, the lock can be acquired by another thread, and it is done inside of the spinlock pair so that another thread does not swoop in and acquire the lock before it is properly put to sleep. We assert that the release worked and that its owner is now NULL. We also assert that the current thread is not in an interrupt. Then finally the thread is put to sleep using wchan_sleep(). That function uses the condition variable’s wait channel and spinlock to change the current thread’s state to sleeping. At this point the function will pause because the code can no longer be executed. Eventually if the thread awakes because of a call to cv_signal() or cv_broadcast() then the code will resume, the spinlock will release, the thread will attempt to acquire the lock again using lock_acquire() and once it does it will finish. 
+
+void cv_signal(struct cv *cv, struct lock *lock) {}
+	In cv_signal() a condition variable struct (cv) and a lock struct (lock) are passed in and nothing is returned. The basic purpose of the function is to wake up a single thread sleeping on the wait channel of the passed in condition variable. First the condition variable’s spinlock is acquired to ensure mutual exclusivity. An assert is used to check that the current thread holds the passed in lock. Assuming it holds the lock, wchan_wakeone() is called, passing in the condition variable’s wait channel and spinlock. This checks to see if any threads are waiting on the conditional variable. If there are, wake one and put it into the “ready threads” queue. If there are no threads waiting, wchan_wakeone() returns quietly. Afterwards the spinlock is released and it will finish. 
+
+void cv_broadcast(struct cv *cv, struct lock *lock)
+	cv_broadcast() functions the same as cv_signal except it calls wchan_wakeall() instead of wchan_wakeone(). This has the effect of waking up all threads waiting on the passed in condition variable.
+
+*********************************************************************************
+WHALEMATING.C
+
+In order to pass variables and information into the whale functions so that all whales could have the same synced information a struct is needed which is called whale_guts. This struct contains 6 cvs: one for the males that are ready to mate and are waiting to mate (m_cv), one that is for the females that are ready and waiting mate (f_mv), one for the females that are currently mating and waiting until it its partner to arive and finish (fmating_cv), one for the males that are currently mating and waiting for it's partner to arrive and finish (mmating_cv), one for the matchmakers that are waiting for a female and a male to be available (mm_cv), and one for the matchmakers that are ready but waiting for the the stage as main matchmaker. The struct contains the lock that is used to insure that no other whale can step on any of the critical sections of other whales. The struct has an int is_first that is used to see if the current matchmaker is the first matchmaker to come along, if it is then it does not wait in the mmstarting_cv and the is_first int is set to 0. The struct has an in num_mating containing the number of whales that are mating at a time; this number should be no larger than 2 and no less than 0 as only one male and one female should be mating at a time. The array male_indices is used to keep track of the arrival order of the whale numbers that are waiting on the m_cv CV. Likewise, the array female_indices is used to keep track of the arrival order of the whale numbers that are waiting on the f_cv CV. The int male_index is place that the current whale arrived that will be placed in the male_indices array. The int female_index is place that the current whale arrived that will be placed in the female_indices array. Lastly, the matchmaker_index is used by the matchmaker to make sure that the correct pair of whale numbers is outputed when the matchmaker proclaims that two whales are mating.
+
+The semaphore is used in the for loop at the bottom of the whalemating function to make sure that the function does not terminate until the last thread is done. To do this P() is called for each whale that was used in the mating process and each time a whale function terminates it calls V() to decrement the semaphore's counter.
+
+male()
+In the male() whale function the whale_guts struct that is passed in as a void* is then cast as a whale_guts* and is stored in a pointer *guts. The lock is then acquired so that no other whale can access any their critical sections. This lock can be compared to a talk stick; only the one who has the stick may say what they want to say. The current whale's number is stored in the male_indices array at the value corresponding to the current whale's arrival position. Then the index is incremented so that when the next whale is added to the array its number will be stored in the next position in the array. This array is used to keep track of the whale numbers when it is time for the numbers of the whales to be printed in the matchmaker function. The male whale then signals to wake up a matchmaker if a matchmaker is sleeping on the mm_cv if there was not one male and one female whale ready to mate and waiting in its respective CV. That male whale then waits on the m_cv and waits until a female is ready and for the matchmaker to then awake them. Once that condition has been met the male whale wakes up and prints that it is mating. It then signals to the matchmaker's cv to wake up the matchmaker if one was waiting until there are two whales that are mating. The male whale is then slept on the mmating_cv to signal that it is mating with a female whale that should be in its respective fmating_cv. Once both a male and a female whale are in their respective CVs and are waiting to be pronounced "mated" by the matchmaker they are awoken from their respective mating_cv and they then output the they are exiting. They then release their lock so that they should never acquire the lock again until the function exits. The male then calls V() to decrement the sem's counter and show that that whale is now finished and has successfully mated.
+
+female() 
+This function is identical to the male() whale function.
+
+matchmaker()
+This is the driver whale function. Just as the in the other whale functions, the whale_guts struct that is passed in as a void* is then cast as a whale_guts* and is stored in a pointer *guts. The matchmaker then calls lock acquire so that no other whale can access its respective critical section. The matchmaker then sees if it is the first matchmaker to enter its critical section; if it is then is continues on, if it isn't then it waits on the mmstarting_cv until the previous whale has finished with its mating duties upon which it would be signaled to wake up and proceed on to mate a whale pair. This is necessary otherwise the ordering of the matchmakers would be thrown off and it would be possible for one matchmaker to begin its matching process and thus all matchmakers would match before any of the male or female whales have finished mating and printed that they are exiting. The matchmaker then checks to see if either the m_cv or the f_cv does not have any whales waiting on it. If there aren't then the matchmaker will sleep on the mm_cv until there is at least one male and one female on in their respective CVs; the while loop ensures mesa monitoring and that the matchmaker, if somehow awoken prematurely, will not try to continue on with mating. The matchmaker then wakes up both whales on their respective CVs now that the condition has been met that both whales are available to mate. The matchmaker then checks to see if there are more less than two whales that are mating, if there are then it sleeps on the mm_cv until both are ready. That's where num_mating comes in. When a whale is in its mating cv waiting to be woken when both whales are ready, it increments the num_mating int. Once num_mating reaches 2 the matchmaker decrements it twice and signals for the both of the mated whales to wake up from the CV and to show that they are finished mating the matchmaker outputs which whales were mated along with its number and then both of the mated whales output that they are exiting from having mated. The matchmaker increments the matchmaker_index so that the next matchmaker can output the correct numbers of the mating whales. Then, before releasing the lock and decrementing the semaphore's value, it checks to see if there are any other matchmaker whales waiting in the mmstarting_cv, if there are the current matchmaker wakes up next one since it has now successfully carried out its matchmaking duties.
+
+whalemating()
+This function creates all of the CVs, the lock, the semaphore, and initializes the ints needed to keep the whale on track and that are also in the struct. This function also has the for loop at the end that ensures the function does not terminate until all threads have finished.
+
+*********************************************************************************
+WHALEMATING FACT:
+
+The top ten heaviest living animal species are all whales.
 
 
 *********************************************************************************
-Something funny about whales:
-	blah
+QUESTIONS
+
+1. What happens to a thread when it exits (i.e., calls thread_exit())? What about when it sleeps?
+
+When the thread_exit() function is called, it:
+-Creates a thread struct
+-Sets it equal to the current thread
+-Removes the thread from the current process with proc_remthread()
+-Checks that it worked with a KASSERT
+-Makes sure that nothing fishy happening with its memory stack like an overflow error with thread_checkstack()
+-Sets the thread priority to high with splhigh() so that it will not be interrupted. 
+-It switches itself to the zombie state with thread_switch()
+-If that doesn’t work, the thread panics with the error message “braaaaaaaiiiiiiiiiiinssssss”
+
+	Effectively what this does is prepare the thread for thread_destroy by cutting off its access and interaction with the rest of the program.
+	A thread going to sleep normally means thread_switch() was called with the S_SLEEP parameter passed in. The sleep-case of thread_switch() uses a spinlock to carefully put a thread to sleep on a wait channel which is then put onto the tail of the threadlist with threadlist_addtail(). The threadlist is a queue of threads waiting to run. The difference between this and exiting the thread is that exiting cuts off and cleans up the unused parts of the thread before setting it adrift as a zombie, while this just puts it at the end of an appropriate queue waiting to eventually resume function.
 
 
-
-*********************************************************************************
-Qs
-1. What happens to a thread when it exits (i.e., calls thread_exit())? What about 
-when it sleeps?
-
-	
 
 2. What function(s) handle(s) a context switch?
+	
+	thread_switch() handles switching a thread to a new state. When the current functioning thread needs to switch, switchframe_switch() is called. It records and saves the current state and registers of the thread in memory until it resumes function, and loads the previously saved state and registers of the incoming thread.
 
 
 
+3. What does it mean for a thread to be in each of the possible thread states?
 
-3. What does it mean for a thread to be in each of the possible thread states? 
+S_RUN
+	-Currently running, the active thread.
+	-A thread is switched to this state when loaded by the scheduler
+S_READY
+	-When a thread is switched to the ready state, it is put at the tail of the ready queue.
+	-It will wait until it reaches the head and is loaded by the scheduler
+S_SLEEP
+	-The thread is placed onto the tail of a threadlist which is essentially a wait channel. 
+	-The wait channel is a queue of blocked threads waiting to be placed on the ready queue. 
+	-The thread state and registers are saved in memory
+S_ZOMBIE
+	-Effectively dead
+	-Sitting on the zombie threadlist and waiting to be cleaned up by thread_destroy() in the exorcise() function
 
-4. What does it mean to turn interrupts off? How is this accomplished? Why is it
-important to turn off interrupts in the thread subsystem code?
 
-5. What happens when a thread wakes up another thread? How does a sleeping
-thread get to run again?
 
+4. What does it mean to turn interrupts off? How is this accomplished? Why is it important to turn off interrupts in the thread subsystem code?
+
+	Interrupts are turned off by raising a thread’s priority level. The functions that control priority levels are mainly in spl.c. splraise() is used to raise it, spllower() is used to lower it and splx() is used to switch it to an exact value. Interrupts are specifically turned off by changing a thread’s priority level to the highest level. There are only two priority levels in default os161, IPL_HIGH which is set to 1 and IPL_NONE which is set to 0., So turning interrupts off means raising the current thread’s priority to 1.
+
+
+
+5. What happens when a thread wakes up another thread? How does a sleeping thread get to run again?
+
+	Threads are woken up by another thread using the "thread_make_runnable()" function on them. This can happen when wchan_wakeone() or wchan_wakeall() are called, when thread_fork() is called, or when thread_switch() is called with the S_READY parameter. When a sleeping thread awakes it is "ready", meaning it is not waiting on a condition to run, it will be ready the moment it is given permission to run. The now ready thread is added to the tail of the linked list of ready threads for the appropriate cpu where it will eventually be deployed by the scheduler.
 
 
 
 6. What function is responsible for choosing the next thread to run?
+void schedule(void) {} in thread.c
+
 
 7. How does that function pick the next thread?
-
-8. What role does the hardware timer play in scheduling? What hardware independent 
-function is called on a timer interrupt?
+At the moment the function does nothing, so threads are scheduled round robin in the order they are put onto the cpu’s runnable threads queue with a time quantum defined in clock.c
 
 
-
-
-
-
+8. What role does the hardware timer play in scheduling? What hardware independent function is called on a timer interrupt?
+The role of the hardware timer in scheduling is the clock rate. The scheduler is invoked every time the clock has ticked a number of times equal to a multiple of a predefined enum “SCHEDULE_HARDCLOCKS”. The ipi “Inter-Processor-Interrupt” functions are called on timer interrupts. ipi_send() specifically is used to interrupt other threads.
 
 
