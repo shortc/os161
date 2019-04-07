@@ -74,6 +74,7 @@ WHALEMATING FACT:
 
 The top ten heaviest living animal species are all whales.
 
+https://www.youtube.com/watch?v=t4BiwzqcV3s
 
 *********************************************************************************
 QUESTIONS
@@ -130,16 +131,15 @@ S_ZOMBIE
 	Threads are woken up by another thread using the "thread_make_runnable()" function on them. This can happen when wchan_wakeone() or wchan_wakeall() are called, when thread_fork() is called, or when thread_switch() is called with the S_READY parameter. When a sleeping thread awakes it is "ready", meaning it is not waiting on a condition to run, it will be ready the moment it is given permission to run. The now ready thread is added to the tail of the linked list of ready threads for the appropriate cpu where it will eventually be deployed by the scheduler.
 
 
-
 6. What function is responsible for choosing the next thread to run?
-void schedule(void) {} in thread.c
+	void schedule(void) {} in thread.c
 
 
 7. How does that function pick the next thread?
-At the moment the function does nothing, so threads are scheduled round robin in the order they are put onto the cpu’s runnable threads queue with a time quantum defined in clock.c
+	At the moment the function does nothing, so threads are scheduled round robin in the order they are put onto the cpu’s runnable threads queue with a time quantum defined in clock.c
 
 
 8. What role does the hardware timer play in scheduling? What hardware independent function is called on a timer interrupt?
-The role of the hardware timer in scheduling is the clock rate. The scheduler is invoked every time the clock has ticked a number of times equal to a multiple of a predefined enum “SCHEDULE_HARDCLOCKS”. The ipi “Inter-Processor-Interrupt” functions are called on timer interrupts. ipi_send() specifically is used to interrupt other threads.
+	The role of the hardware timer in scheduling is the clock rate. The scheduler is invoked every time the clock has ticked a number of times equal to a multiple of a predefined enum “SCHEDULE_HARDCLOCKS”. The ipi “Inter-Processor-Interrupt” functions are called on timer interrupts. ipi_send() specifically is used to interrupt other threads.
 
 
