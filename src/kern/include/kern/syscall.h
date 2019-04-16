@@ -47,12 +47,12 @@
 /*CALLBEGIN*/
 
 //                              -- Process-related --
-#define SYS_fork         0
+#define SYS_fork         0		//IMPLEMENT
 #define SYS_vfork        1
-#define SYS_execv        2
-#define SYS__exit        3
-#define SYS_waitpid      4
-#define SYS_getpid       5
+#define SYS_execv        2		//IMPLEMENT
+#define SYS__exit        3		//IMPLEMENT
+#define SYS_waitpid      4		//IMPLEMENT
+#define SYS_getpid       5		//IMPLEMENT
 #define SYS_getppid      6
 //                              (virtual memory)
 #define SYS_sbrk         7
@@ -102,21 +102,21 @@
 //#define SYS_ptrace     44
 
 //                              -- File-handle-related --
-#define SYS_open         45
+#define SYS_open         45		//IMPLEMENT
 #define SYS_pipe         46
 #define SYS_dup          47
-#define SYS_dup2         48
-#define SYS_close        49
-#define SYS_read         50
+#define SYS_dup2         48		//IMPLEMENT
+#define SYS_close        49		//IMPLEMENT
+#define SYS_read         50		//IMPLEMENT
 #define SYS_pread        51
 //#define SYS_readv      52
 //#define SYS_preadv     53
 #define SYS_getdirentry  54
-#define SYS_write        55
+#define SYS_write        55		//IMPLEMENT
 #define SYS_pwrite       56
 //#define SYS_writev     57
 //#define SYS_pwritev    58
-#define SYS_lseek        59
+#define SYS_lseek        59		//IMPLEMENT
 #define SYS_flock        60
 #define SYS_ftruncate    61
 #define SYS_fsync        62
@@ -134,9 +134,9 @@
 #define SYS_rename       72
 #define SYS_access       73
 //                              (current directory)
-#define SYS_chdir        74
+#define SYS_chdir        74		//IMPLEMENT
 #define SYS_fchdir       75
-#define SYS___getcwd     76
+#define SYS___getcwd     76		//IMPLEMENT
 //                              (symbolic links)
 #define SYS_symlink      77
 #define SYS_readlink     78
