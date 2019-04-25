@@ -55,6 +55,18 @@
 struct proc *kproc;
 
 /*
+ * The pointer to the pid table; array of bits that where the index is
+ * the pid. Array is actually an array of ints but each bit of each int is
+ * an index
+ */
+unsigned int *pid_table;
+
+/*
+ * This is a int that is the last successful pid insertion
+ */
+int last_successful_pid;
+
+/*
  * Create a proc structure.
  */
 static
@@ -81,6 +93,43 @@ proc_create(const char *name)
 
 	/* VFS fields */
 	proc->p_cwd = NULL;
+
+    
+    /* If the process name is kernel */  
+    if (proc->p_name == "[kernel]") {
+        /* pid 0 should be set if kernel process is being created */      
+        if (test_bit(pid_table, 0)) {
+            panic("the kernel process already exists\n");
+        }
+        else {
+            set_bit(pid_table, 0);    // set kernel pid bit in pid table
+            last_successful_pid = 0;    // the last pid that was set was 0
+            proc->pid = 0;    // give the process its pid
+        }
+    }
+    else {
+        
+        int pids_checked = 0;    // if more than TABLESIZE*32: ran out of memory 
+
+        /* while pid is taken, go to next pid  */
+        while (test_bit(pid_table, (last_successful_pid+1)%(TABLESIZE*32))) {
+            
+            last_successful_pid = (last_successful_pid+1)%(TABLESIZE*32) ;
+            
+            pids_checked++; 
+            
+            if (no_more_pid_checker > (TABLESIZE*32)) {
+
+                /* THIS NEEDS TO BE CHANGED SO THAT IT CANNOT FAIL */
+                panic("OUT OF MEMORY!!! EVERYBODY RUNNN THE WHOLE THING IS GONNA BLOW!\n");
+                /* THIS NEEDS TO BE CHANGED SO THAT IT CANNOT FAIL */
+            
+            }
+        }
+        last_successful_pid = (last_successful_pid+1)%(TABLESIZE*32) ;
+        set_bit(pid_table, last_successful_pid);
+        proc->pid = last_successful_pid;
+    }
 
 	return proc;
 }
@@ -165,6 +214,10 @@ proc_destroy(struct proc *proc)
 		as_destroy(as);
 	}
 
+    
+    proc->pid = NULL;   // idk why I did this, it might be useful
+    clear_bit(pid_table, pid);    // flip the bit in the pid_table
+
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
 
@@ -182,6 +235,48 @@ proc_bootstrap(void)
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
+
+    /* Allocate for the pid_table */
+    pid_table = (unsigned int *)malloc(TABLESIZE*sizeof(unsigned int));
+
+    /* Initialze all of the bits in the pid table to 0  */
+    for(i = 0; i < TABLESIZE; i++) {
+        pid_table[i] = 0;
+    }
+
+
+}
+
+/*
+ * Sets the bit in the in the array of int of the given index  (pid) 
+ */
+void
+set_bit(pids[], k)
+{
+    pids[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
+}
+
+/*
+ * Clears the bit in the in the array of int of the given index  (pid) 
+ */
+void
+clear_bit(pids, k)
+{
+    pids[k/32] &= ~(1 << (k%32));
+}
+
+/*
+ * Tests if the bit in that index in the int in the int array is set to 1 
+ */
+int
+test_bit(pids, k)
+{
+    if ((pids[k/32] & (1 << (k%32)))) {    // value != 0 is "true" in C !    
+        return 1; // k-th bit is 1
+    }
+    else {
+        return 0; // k-th bit is 0  
+    }
 }
 
 /*
