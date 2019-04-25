@@ -94,9 +94,11 @@ proc_create(const char *name)
 	/* VFS fields */
 	proc->p_cwd = NULL;
 
-    
+    char kern_name[8];
+    strcpy(kern_name, "[kernel]");
+
     /* If the process name is kernel */  
-    if (proc->p_name == "[kernel]") {
+    if (strcmp(proc->p_name, kern_name)) {
         /* pid 0 should be set if kernel process is being created */      
         if (test_bit(pid_table, 0)) {
             panic("the kernel process already exists\n");
@@ -118,7 +120,7 @@ proc_create(const char *name)
             
             pids_checked++; 
             
-            if (no_more_pid_checker > (TABLESIZE*32)) {
+            if (pids_checked > (TABLESIZE*32)) {
 
                 /* THIS NEEDS TO BE CHANGED SO THAT IT CANNOT FAIL */
                 panic("OUT OF MEMORY!!! EVERYBODY RUNNN THE WHOLE THING IS GONNA BLOW!\n");
@@ -215,8 +217,7 @@ proc_destroy(struct proc *proc)
 	}
 
     
-    proc->pid = NULL;   // idk why I did this, it might be useful
-    clear_bit(pid_table, pid);    // flip the bit in the pid_table
+    clear_bit(pid_table, proc->pid);    // flip the bit in the pid_table
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
@@ -237,10 +238,10 @@ proc_bootstrap(void)
 	}
 
     /* Allocate for the pid_table */
-    pid_table = (unsigned int *)malloc(TABLESIZE*sizeof(unsigned int));
+    pid_table = kmalloc(TABLESIZE*sizeof(unsigned int));
 
     /* Initialze all of the bits in the pid table to 0  */
-    for(i = 0; i < TABLESIZE; i++) {
+    for(int i = 0; i < TABLESIZE; i++) {
         pid_table[i] = 0;
     }
 
@@ -251,7 +252,7 @@ proc_bootstrap(void)
  * Sets the bit in the in the array of int of the given index  (pid) 
  */
 void
-set_bit(pids[], k)
+set_bit(unsigned int pids, unsigned int k)
 {
     pids[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
 }
@@ -260,7 +261,7 @@ set_bit(pids[], k)
  * Clears the bit in the in the array of int of the given index  (pid) 
  */
 void
-clear_bit(pids, k)
+clear_bit(unsigned int pids, unsigned int k)
 {
     pids[k/32] &= ~(1 << (k%32));
 }
@@ -269,7 +270,7 @@ clear_bit(pids, k)
  * Tests if the bit in that index in the int in the int array is set to 1 
  */
 int
-test_bit(pids, k)
+test_bit(unsigned int pids, unsigned int k)
 {
     if ((pids[k/32] & (1 << (k%32)))) {    // value != 0 is "true" in C !    
         return 1; // k-th bit is 1
