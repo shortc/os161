@@ -30,6 +30,8 @@
 #ifndef _PROC_H_
 #define _PROC_H_
 
+#define TABLESIZE 1024/32
+
 /*
  * Definition of a process.
  *
@@ -41,6 +43,9 @@
 struct addrspace;
 struct thread;
 struct vnode;
+
+unsigned int pid_table[];
+int last_successful_pid;
 
 /*
  * Process structure.
@@ -71,6 +76,8 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* add more material here as needed */
+    int pid;   
+
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
@@ -96,6 +103,10 @@ struct addrspace *proc_getas(void);
 
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *proc_setas(struct addrspace *);
+
+set_bit(unsigned int *pids, int k);
+clear_bit(unsigned int *pids, int k);
+test_bit(unsigned int *pids, int k);
 
 
 #endif /* _PROC_H_ */
