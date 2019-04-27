@@ -18,8 +18,22 @@ int sys_chdir() {
 }
 
 // Syscall ID 76
-int sys___getcwd() {
-    return 0;
+int sys___getcwd(int *retval) {
+
+	struct uio uio;
+	int result;
+
+	result = vfs_getcwd(&uio);
+	
+	if(result) {
+		kprintf("Error getting current working directory!\n");
+		return -1;
+	}
+
+
+	//retval = uio?
+    kprintf("successfully retreived cwd!\n");
+	return 0;
 }
 
 
