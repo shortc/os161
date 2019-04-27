@@ -11,7 +11,17 @@ int chdir() {
 }
 
 // Syscall ID 76
-int getcwd() {
+int sys_getcwd() {
+
+	struct uio uio;
+	int result;
+
+	result = vfs_getcwd(&uio);
+	
+	if(result) {
+		panic("Error getting directory!\n");
+	}
+
     return 0;
 }
 
