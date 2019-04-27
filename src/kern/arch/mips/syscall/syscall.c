@@ -114,9 +114,9 @@ syscall(struct trapframe *tf)
         err = sys_getpid(&retval);
         break;
 
-        case SYS_open:
-        err = sys_open(&retval);
-        break;
+        //case SYS_open:
+        //err = sys_open(&retval);
+        //break;
 
         case SYS___getcwd:
         err = sys___getcwd(&retval);
