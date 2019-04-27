@@ -2,16 +2,14 @@
  * Current implementation of file oriented systemcalls
  */
 
+#include <types.h>
 #include <vfs.h>
 #include <vnode.h>
+#include <filetable.h>
+#include <uio.h>
+#include <syscall.h>
 
-// Syscall ID 74
-int chdir() {
-    return 0; 
-}
-
-// Syscall ID 76
-int sys_getcwd(int *retval) {
+int sys___getcwd(int32_t *retval) {
 
 	struct uio uio;
 	int result;
@@ -24,55 +22,10 @@ int sys_getcwd(int *retval) {
 	}
 
 
-	//retval = uio?
+	*retval = (int32_t) NULL;
+
+
     kprintf("successfully retreived cwd!\n");
 	return 0;
 }
-
-
-
-///////////////////////////
-//  Unsure if necessary  //
-//                       //
-
-// Syscall ID 45
-int open() {
-
-	return 0;
-}
-
-// Syscall ID 50
-int read() {
-    
-	return 0;
-}
-
-// Syscall ID 55
-int write() {
-    
-	return 0;
-}
-
-// Syscall ID 59
-int lseek() {
-    
-	return 0;
-}
-
-// Syscall ID 49
-int close() {
-    
-	return 0;
-}
-
-// Syscall ID 48
-int dup2() {
-    
-	return 0;
-}
-   
-//                       //
-//  Unsure if necessary  //
-///////////////////////////
-
 
