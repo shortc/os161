@@ -11,8 +11,22 @@ int chdir() {
 }
 
 // Syscall ID 76
-int getcwd() {
-    return 0;
+int sys_getcwd(int *retval) {
+
+	struct uio uio;
+	int result;
+
+	result = vfs_getcwd(&uio);
+	
+	if(result) {
+		kprintf("Error getting current working directory!\n");
+		return -1;
+	}
+
+
+	//retval = uio?
+    kprintf("successfully retreived cwd!\n");
+	return 0;
 }
 
 
@@ -23,32 +37,38 @@ int getcwd() {
 
 // Syscall ID 45
 int open() {
-    return 0;
+
+	return 0;
 }
 
 // Syscall ID 50
 int read() {
-    return 0;
+    
+	return 0;
 }
 
 // Syscall ID 55
 int write() {
-    return 0;
+    
+	return 0;
 }
 
 // Syscall ID 59
 int lseek() {
-    return 0;
+    
+	return 0;
 }
 
 // Syscall ID 49
 int close() {
-    return 0;
+    
+	return 0;
 }
 
 // Syscall ID 48
 int dup2() {
-    return 0;
+    
+	return 0;
 }
    
 //                       //
