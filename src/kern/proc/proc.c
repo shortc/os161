@@ -188,7 +188,7 @@ proc_destroy(struct proc *proc)
 		 * uncommon. However, here we're going to destroy the
 		 * address space, so we need to make sure that nothing
 		 * in the VM system still refers to it.)
-		 *
+		 
 		 * The call to as_deactivate() must come after we
 		 * clear the address space, or a timer interrupt might
 		 * reactivate the old address space again behind our
@@ -249,19 +249,19 @@ proc_bootstrap(void)
 }
 
 /*
- * Sets the bit in the in the array of int of the given index  (pid) 
+ * Sets the bit in the in the array of int of the given index (pid) 
  */
 void
-set_bit(unsigned int pids, unsigned int k)
+set_bit(unsigned int *pids, unsigned int k)
 {
     pids[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
 }
 
 /*
- * Clears the bit in the in the array of int of the given index  (pid) 
+ * Clears the bit in the in the array of int of the given index (pid) 
  */
 void
-clear_bit(unsigned int pids, unsigned int k)
+clear_bit(unsigned int *pids, unsigned int k)
 {
     pids[k/32] &= ~(1 << (k%32));
 }
@@ -270,7 +270,7 @@ clear_bit(unsigned int pids, unsigned int k)
  * Tests if the bit in that index in the int in the int array is set to 1 
  */
 int
-test_bit(unsigned int pids, unsigned int k)
+test_bit(unsigned int *pids, unsigned int k)
 {
     if ((pids[k/32] & (1 << (k%32)))) {    // value != 0 is "true" in C !    
         return 1; // k-th bit is 1
