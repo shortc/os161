@@ -12,6 +12,6 @@ struct filetable_entries {
     struct vn *vnode;
 };
 
-struct filetable_entries *filetable = kmalloc(FILE_MAX*sizeof(struct *filetable_entries)); 
+//struct filetable_entries *filetable = kmalloc(FILE_MAX*sizeof(struct *filetable_entries)); 
 
 #endif
