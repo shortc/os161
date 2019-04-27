@@ -19,11 +19,14 @@ int sys_getcwd(int *retval) {
 	result = vfs_getcwd(&uio);
 	
 	if(result) {
-		panic("Error getting directory!\n");
+		kprintf("Error getting current working directory!\n");
+		return -1;
 	}
 
-	//value = uio?
-    return 0;
+
+	//retval = uio?
+    kprintf("successfully retreived cwd!\n");
+	return 0;
 }
 
 
