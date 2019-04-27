@@ -98,6 +98,8 @@
 #define __LOGIN_NAME_MAX 17
 
 
+#define __FILE_MAX 65000
+
 /*
  * Not very important at all.
  */
