@@ -33,12 +33,17 @@ int sys_execv(const char *path, char *const argv[]) {
 }
 */
 
-/*
-int sys_waitpid(pid_t pid, int *status, int options, int *retval) {
-    
+
+int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
+
+	(void)pid;
+	(void)status;
+	(void)options;
+	(void)retval;
+
 	return 0;
 }
-*/
+
 
 
 int sys__exit(int retcode) {
