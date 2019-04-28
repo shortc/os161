@@ -39,6 +39,7 @@
  */
 
 #include <spinlock.h>
+#include <filetable.h>
 
 struct addrspace;
 struct thread;
@@ -75,7 +76,10 @@ struct proc {
 
 	/* add more material here as needed */
     int pid;   
-	int exitcode;
+  
+    struct filetable_entry **entry;
+	  
+    int exitcode;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */

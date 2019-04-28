@@ -5,13 +5,13 @@
 #include <limits.h>
 
 
-struct filetable_entries {    
+struct filetable_entry {    
     int r_flag;
-    int ref_num;
-
-    struct vn *vnode;
+    int ref_count;
+    int fd_sys_filetable;
+    struct vnode *vnode;
 };
 
-//struct filetable_entries *filetable = kmalloc(FILE_MAX*sizeof(struct *filetable_entries)); 
+struct filetable_entry **filetable; 
 
 #endif
