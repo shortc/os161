@@ -39,6 +39,7 @@
  */
 
 #include <spinlock.h>
+#include <filetable.h>
 
 struct addrspace;
 struct thread;
@@ -75,6 +76,8 @@ struct proc {
 
 	/* add more material here as needed */
     int pid;   
+
+    struct filetable_entry **entry;
 
 };
 
