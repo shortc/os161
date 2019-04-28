@@ -32,6 +32,7 @@
 
 
 #include <cdefs.h> /* for __DEAD */
+#include <filetable.h>
 struct trapframe; /* from <machine/trapframe.h> */
 
 /*
@@ -61,5 +62,14 @@ int sys_reboot(int code);
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 int sys_getpid(int32_t *retval);
 int sys___getcwd(int32_t *retval);
+int sys_open(userptr_t user_filename, int flags, int32_t *retval);
+int sys_close(int fd);
+int sys_read(int fd, userptr_t user_buffer, size_t buflen, int32_t *retval);
+int sys_write(int fd, userptr_t user_buffer, size_t nbytes, int32_t *retval);
+int sys_lseek(int fd, off_t pos, int whence, int32_t *retval);
+int sys_dup2(int oldfd, int newfd, int32_t *retval);
+
+void open_file(userptr_t filename, int rflags, struct filetable_entry *file);
+void close_file(int fd);
 
 #endif /* _SYSCALL_H_ */
