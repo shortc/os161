@@ -17,16 +17,20 @@ int sys_getpid(int32_t *retval) {
     return 0;
 }
 
-/*
-int sys_fork(int *retval) {
-   
+
+int sys_fork(struct trapframe *tf, int *retval) {
+  
+	(void)tf;
+	//int32_t id;
 	int id;
 	sys_getpid(&id);
-    
-	error = thread_fork(...);
+	
+
+	*retval = -1;
+	//error = thread_fork(...);
 	return 0;
 }
-*/
+
 
 
 /*
@@ -107,8 +111,7 @@ int sys_execv(const char *path, char *const argv[]) {
 
 int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
-	(void)pid;
-	(void)status;
+	
 
 	struct proc *proc;
 	(void)proc;
@@ -120,23 +123,25 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 	}
 
-//pid < -1: wait for a thread with process group ID equal to absolute value of pid
-//pid == -1: wait for any child thread 
-//pid == 0: wait for a thread with process group ID equal to that of the calling process
-//pid > 0: wait for a thread with process group pid
+/*pid < -1: wait for a thread with pid group equal to absolute value of pid*/
+/*pid == 0: wait for a thread with pid group equal to that of the calling process*/
 	if(pid < -1 || pid == 0) {
-		kprintf("waitpid: functionality for supplied pid (%d) not yet implemented\n", pid);
+		kprintf("waitpid: functionality for pid (%d) not yet implemented\n", pid);
 		*retval = -1;
 		return EINVAL;
 	}
 
 	if(pid > 0 && !test_bit(pid)){
-	//if(pid > 0 && !test_bit(pid_table, pid)){
 		*retval = -1;
 		kprintf("waitpid: tried to wait on a pid that is not in use\n");
 		return ECHILD;
 		
 	}
+
+
+//pid == -1: wait for any child thread 
+//pid > 0: wait for a thread with process group pid
+
 
 
 
@@ -153,10 +158,7 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 if  WNOHANG was specified and one or more child(ren) specified by pid exist, 
 but have not yet changed state, then 0 is returned.   On  error,  -1  is 
 returned
-*/
 
-//Errors
-/*
 ECHILD (for  waitpid() or waitid()) The process specified by pid (waitpid()) or
 idtype and id (waitid()) does not exist or is not a child of the calling
 process.  (This can happen for one's own child if the action for SIGCHLD
@@ -168,6 +170,9 @@ is set to SIG_IGN.  See also the Linux Notes section about threads.)
 	//struct proc *p;
 	//*p = proc_create("wow");
 	//proc_destroy(p);
+
+	(void)status;
+	//set status equal to the exit code of the exiting program
 
 	return 0;
 }
