@@ -107,17 +107,53 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 	(void)pid;
 	(void)status;
-	(void)options;
-	(void)retval;
+	//(void)options;
+	//(void)retval;
+
+	struct proc *proc;
+	(void)proc;
+
+	if(options) {
+		kprintf("waitpid error: options attempted but not implemented\n");
+		*retval = -1;
+		return -1;
+
+	}
 
 	//if pid < -1
 		//wait for a thread with process group ID equal to absolute value of pid
 	//if pid == -1
 		//wait for any child thread 
-	//if pid == -1
+	//if pid == 0
 		//wait for a thread with process group ID equal to that of the calling process
-	//if pid == -1
+	//if pid > 0
 		//wait for a thread with process group pid
+
+
+//	lock_acquire(/* a lock */);
+//	cv_wait(/*a cv!*/, /*a lock*/);
+//	lock_release(/*a lock!*/);
+
+	/*"Take Care Of" child thread?*/
+
+//	*status = proc->exitcode;
+
+
+/*on success, returns the process ID of  the  child  whose  state  has changed;  
+if  WNOHANG was specified and one or more child(ren) specified by pid exist, 
+but have not yet changed state, then 0 is returned.   On  error,  -1  is 
+returned
+*/
+
+//Errors
+/*
+ECHILD (for  waitpid() or waitid()) The process specified by pid (waitpid()) or
+idtype and id (waitid()) does not exist or is not a child of the calling
+process.  (This can happen for one's own child if the action for SIGCHLD
+is set to SIG_IGN.  See also the Linux Notes section about threads.)
+*/
+
+
 
 
 
@@ -128,8 +164,27 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 
 int sys__exit(int retcode) {
-	(void)retcode;
 	
+/*
+The  function  _exit()  terminates the calling process "immediately".  Any open
+file descriptors belonging to the process  are  closed;  any  children  of  the
+process  are  inherited  by process 1, init, and the process's parent is sent a
+SIGCHLD signal.
+
+The value status is returned to the parent process as the process's  exit  sta-
+tus, and can be collected using one of the wait(2) family of calls.
+*/
+
+
+	//Close open files and any taken file descriptors
+		//vfs_close(vn);?
+	//"Take Care Of" children threads?
+
+	//Signal parent that I'm dyong?
+
+	//Wake up any processes waiting on it from waitpid?
+	
+	curproc->exitcode = retcode;
 	
 	thread_exit();
 	//Should not reach past this (i.e. never returns)

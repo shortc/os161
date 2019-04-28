@@ -84,7 +84,8 @@ proc_create(const char *name)
 		kfree(proc);
 		return NULL;
 	}
-
+	
+	//proc->exitcode = NULL;
 	proc->p_numthreads = 0;
 	spinlock_init(&proc->p_lock);
 
