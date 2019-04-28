@@ -48,6 +48,7 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <filetable.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -131,6 +132,12 @@ proc_create(const char *name)
         last_successful_pid = (last_successful_pid+1)%(TABLESIZE*32) ;
         set_bit(pid_table, last_successful_pid);
         proc->pid = last_successful_pid;
+    }
+
+    proc->entry = kmalloc(OPEN_MAX*sizeof(struct filetable_entry**));
+
+    for(int y = 0; y < OPEN_MAX; y++) {
+        proc->entry[y] = NULL;
     }
 
 	return proc;
@@ -243,6 +250,12 @@ proc_bootstrap(void)
     /* Initialze all of the bits in the pid table to 0  */
     for(int i = 0; i < TABLESIZE; i++) {
         pid_table[i] = 0;
+    }
+
+    filetable = kmalloc(FILE_MAX*sizeof(struct filetable_entry*));
+    
+    for (int y = 0; y < OPEN_MAX; y++) {
+        filetable[y] = NULL;
     }
 
 
