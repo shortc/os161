@@ -10,6 +10,7 @@
 #include <current.h>
 #include <proc.h>
 #include <filetable.h>
+#include <kern/errno.h>
 
 int sys_getpid(int32_t *retval) {
     *retval = (int32_t)curproc->pid;
@@ -116,9 +117,17 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 	if(options) {
 		kprintf("waitpid error: options attempted but not implemented\n");
 		*retval = -1;
-		return -1;
+		return EINVAL;
 
 	}
+
+	if(pid < -1 || pid == 0) {
+		kprintf("waitpid: functionality for supplied pid (%d) not yet implemented\n", pid);
+		*retval = -1;
+		return EINVAL;
+	}
+
+
 
 	//if pid < -1
 		//wait for a thread with process group ID equal to absolute value of pid
@@ -155,8 +164,9 @@ is set to SIG_IGN.  See also the Linux Notes section about threads.)
 
 
 
-
-
+	//struct proc *p;
+	//*p = proc_create("wow");
+	//proc_destroy(p);
 
 	return 0;
 }

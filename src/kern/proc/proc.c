@@ -415,3 +415,19 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
+
+int check_pid(int32_t pid) {
+
+	(void)pid;
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+

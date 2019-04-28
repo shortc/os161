@@ -105,6 +105,7 @@ struct addrspace *proc_setas(struct addrspace *);
 void set_bit(unsigned int *pids, unsigned int k);
 void clear_bit(unsigned int *pids, unsigned int k);
 int test_bit(unsigned int *pids, unsigned int k);
+int check_pid(int32_t pid);
 
 
 #endif /* _PROC_H_ */
