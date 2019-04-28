@@ -84,7 +84,8 @@ proc_create(const char *name)
 		kfree(proc);
 		return NULL;
 	}
-
+	
+	//proc->exitcode = NULL;
 	proc->p_numthreads = 0;
 	spinlock_init(&proc->p_lock);
 
@@ -100,11 +101,11 @@ proc_create(const char *name)
     /* If the process name is kernel */  
     if (strcmp(proc->p_name, kern_name)) {
         /* pid 0 should be set if kernel process is being created */      
-        if (test_bit(pid_table, 0)) {
+        if (test_bit(0)) {
             panic("the kernel process already exists\n");
         }
         else {
-            set_bit(pid_table, 0);    // set kernel pid bit in pid table
+            set_bit(0);    // set kernel pid bit in pid table
             last_successful_pid = 0;    // the last pid that was set was 0
             proc->pid = 0;    // give the process its pid
         }
@@ -114,7 +115,7 @@ proc_create(const char *name)
         int pids_checked = 0;    // if more than TABLESIZE*32: ran out of memory 
 
         /* while pid is taken, go to next pid  */
-        while (test_bit(pid_table, (last_successful_pid+1)%(TABLESIZE*32))) {
+        while (test_bit((last_successful_pid+1)%(TABLESIZE*32))) {
             
             last_successful_pid = (last_successful_pid+1)%(TABLESIZE*32) ;
             
@@ -129,7 +130,7 @@ proc_create(const char *name)
             }
         }
         last_successful_pid = (last_successful_pid+1)%(TABLESIZE*32) ;
-        set_bit(pid_table, last_successful_pid);
+        set_bit(last_successful_pid);
         proc->pid = last_successful_pid;
     }
 
@@ -217,7 +218,7 @@ proc_destroy(struct proc *proc)
 	}
 
     
-    clear_bit(pid_table, proc->pid);    // flip the bit in the pid_table
+    clear_bit(proc->pid);    // flip the bit in the pid_table
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
@@ -252,27 +253,27 @@ proc_bootstrap(void)
  * Sets the bit in the in the array of int of the given index (pid) 
  */
 void
-set_bit(unsigned int *pids, unsigned int k)
+set_bit(unsigned int k)
 {
-    pids[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
+    pid_table[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
 }
 
 /*
  * Clears the bit in the in the array of int of the given index (pid) 
  */
 void
-clear_bit(unsigned int *pids, unsigned int k)
+clear_bit(unsigned int k)
 {
-    pids[k/32] &= ~(1 << (k%32));
+    pid_table[k/32] &= ~(1 << (k%32));
 }
 
 /*
  * Tests if the bit in that index in the int in the int array is set to 1 
  */
 int
-test_bit(unsigned int *pids, unsigned int k)
+test_bit(unsigned int k)
 {
-    if ((pids[k/32] & (1 << (k%32)))) {    // value != 0 is "true" in C !    
+    if ((pid_table[k/32] & (1 << (k%32)))) {    // value != 0 is "true" in C !    
         return 1; // k-th bit is 1
     }
     else {
@@ -414,3 +415,14 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
+
+
+
+
+
+
+
+
+
+
+

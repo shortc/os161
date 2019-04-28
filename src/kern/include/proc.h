@@ -75,7 +75,7 @@ struct proc {
 
 	/* add more material here as needed */
     int pid;   
-
+	int exitcode;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
@@ -102,9 +102,10 @@ struct addrspace *proc_getas(void);
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *proc_setas(struct addrspace *);
 
-void set_bit(unsigned int *pids, unsigned int k);
-void clear_bit(unsigned int *pids, unsigned int k);
-int test_bit(unsigned int *pids, unsigned int k);
+void set_bit(unsigned int k);
+void clear_bit(unsigned int k);
+int test_bit(unsigned int k);
+
 
 
 #endif /* _PROC_H_ */
