@@ -103,40 +103,41 @@ int sys_execv(const char *path, char *const argv[]) {
 */
 
 
+// Wait for a certain thread to exit
 
 int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 	(void)pid;
 	(void)status;
-	//(void)options;
-	//(void)retval;
 
 	struct proc *proc;
 	(void)proc;
 
 	if(options) {
-		kprintf("waitpid error: options attempted but not implemented\n");
+		kprintf("waitpid: options attempted but not implemented\n");
 		*retval = -1;
 		return EINVAL;
 
 	}
 
+//pid < -1: wait for a thread with process group ID equal to absolute value of pid
+//pid == -1: wait for any child thread 
+//pid == 0: wait for a thread with process group ID equal to that of the calling process
+//pid > 0: wait for a thread with process group pid
 	if(pid < -1 || pid == 0) {
 		kprintf("waitpid: functionality for supplied pid (%d) not yet implemented\n", pid);
 		*retval = -1;
 		return EINVAL;
 	}
 
+	if(pid > 0 && !test_bit(pid)){
+	//if(pid > 0 && !test_bit(pid_table, pid)){
+		*retval = -1;
+		kprintf("waitpid: tried to wait on a pid that is not in use\n");
+		return ECHILD;
+		
+	}
 
-
-	//if pid < -1
-		//wait for a thread with process group ID equal to absolute value of pid
-	//if pid == -1
-		//wait for any child thread 
-	//if pid == 0
-		//wait for a thread with process group ID equal to that of the calling process
-	//if pid > 0
-		//wait for a thread with process group pid
 
 
 //	lock_acquire(/* a lock */);
