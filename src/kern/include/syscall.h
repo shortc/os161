@@ -60,14 +60,19 @@ __DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
 int sys_reboot(int code);
 
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-int sys_getpid(int32_t *retval);
 int sys___getcwd(int32_t *retval);
+
 int sys_open(userptr_t user_filename, int flags, int32_t *retval);
 int sys_close(int fd);
 int sys_read(int fd, userptr_t user_buffer, size_t buflen, int32_t *retval);
 int sys_write(int fd, userptr_t user_buffer, size_t nbytes, int32_t *retval);
 int sys_lseek(int fd, off_t pos, int whence, int32_t *retval);
 int sys_dup2(int oldfd, int newfd, int32_t *retval);
+
+int sys_getpid(int32_t *retval);
+int sys_fork(struct trapframe *tf, int *retval);
+int sys_waitpid(int32_t pid, int *status, int options, int *retval);
+int sys__exit(int retcode);
 
 void open_file(userptr_t filename, int rflags, struct filetable_entry *file);
 void close_file(int fd);
