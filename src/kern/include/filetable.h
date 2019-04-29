@@ -7,7 +7,6 @@
 
 struct filetable_entry {    
     int r_flag;
-    int ref_count;
     int fd_sys_filetable;
     struct vnode *vnode;
 };
