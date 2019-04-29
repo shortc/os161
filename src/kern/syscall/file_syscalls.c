@@ -76,13 +76,18 @@ int sys_read(int fd, userptr_t user_buffer, size_t buflen, int32_t *retval) {
         return EBADF;
     }
     
-    //struct uio *uio_reader;
-   
-    (void)user_buffer;
+    struct uio uio_reader;
+    struct iovec ioc;
     
-    //VOP_READ(curproc->entry[fd]->vnode, uio_reader); 
+    uio_kinit(&ioc, &uio_reader, user_buffer, buflen, curproc->entry[fd]->offset, curproc->entry[fd]->r_flag);
+
+    uio_reader.uio_segflg = UIO_USERSPACE;
+
+    VOP_READ(curproc->entry[fd]->vnode, &uio_reader); 
+
+    curproc->entry[fd]->offset = uio_reader.uio_resid;
     
-    *retval = (int32_t) buflen; // only done so it would compile
+    *retval = (int32_t) (buflen - uio_reader.uio_resid); 
     
     return 0;
 }
@@ -93,13 +98,19 @@ int sys_write(int fd, userptr_t user_buffer, size_t nbytes, int32_t *retval) {
         return EBADF;
     }
     
-    //struct uio uio_writer;
+    struct uio uio_writer;
+    struct iovec ioc;
     
-    (void)user_buffer;
-    
-    //VOP_WRITE(curproc->entry[fd]->vnode, uio_writer);
+    uio_kinit(&ioc, &uio_writer, user_buffer, nbytes, curproc->entry[fd]->offset, curproc->entry[fd]->r_flag);
+   
+    uio_writer.uio_segflg = UIO_USERSPACE;
 
-    *retval = (int32_t) nbytes; //only done so it would compile
+
+    VOP_WRITE(curproc->entry[fd]->vnode, &uio_writer);
+
+    curproc->entry[fd]->offset = uio_writer.uio_resid;
+
+    *retval = (int32_t) (nbytes - uio_writer.uio_resid);
 
     return 0;
 }
@@ -114,7 +125,9 @@ int sys_lseek(int fd, off_t pos, int whence, int32_t *retval) {
         return EINVAL;
     }
    
-    (void)pos;
+    curproc->entry[fd]->offset = pos;
+
+    // Not sure what to do here
  
     *retval = (int32_t) NULL;
     
@@ -123,11 +136,45 @@ int sys_lseek(int fd, off_t pos, int whence, int32_t *retval) {
 
 int sys_dup2(int oldfd, int newfd, int32_t *retval) {
     
-    if (curproc->entry[oldfd] == NULL || curproc->entry[newfd] != NULL) {
+    if (curproc->entry[oldfd] == NULL) {
         return EBADF;
     }
+    if (curproc->entry[newfd] != NULL) {
+        sys_close(newfd);
+    }
+    
+    struct filetable_entry *file = kmalloc(sizeof(struct filetable_entry*));
 
-    *retval = (int32_t) NULL;
+    file->r_flag = curproc->entry[oldfd]->r_flag;
+    file->vnode = curproc->entry[oldfd]->vnode;
+    file->offset = curproc->entry[oldfd]->offset;
+
+    int *file_descript = NULL;
+
+    for (int i = 3; i < OPEN_MAX; i++) {
+        if (filetable[i] == (struct filetable_entry*) NULL) {
+            filetable[i] = file;
+            *file_descript = i;
+            break;
+        }
+    }
+
+    if (file_descript == NULL) {
+        return EMFILE;
+    }
+
+    filetable[*file_descript] = file;
+
+    curproc->entry[newfd] = filetable[*file_descript];
+
+    *retval = (int32_t) newfd;
+    return 0;
+}
+
+int sys_chdir(userptr_t user_filename) {
+    
+    vfs_chdir((char *)user_filename);
+
     return 0;
 }
 
@@ -141,6 +188,7 @@ void open_file(userptr_t filename, int rflags, struct filetable_entry *file){
 
     file->r_flag = rflags;
     file->vnode = vn;
+    file->offset = 0;
 
     for (int i = 3; i < FILE_MAX; i++) {
         if (filetable[i] == NULL) {
