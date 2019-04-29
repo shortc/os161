@@ -7,6 +7,7 @@
 
 struct filetable_entry {    
     int r_flag;
+    off_t offset;
     int fd_sys_filetable;
     struct vnode *vnode;
 };
