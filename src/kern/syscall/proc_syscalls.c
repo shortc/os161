@@ -108,8 +108,6 @@ int sys_execv(const char *path, char **args, int *retval) {
 
 int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
-	
-
 	struct proc *child_proc;
 
 	if(options) {
@@ -135,34 +133,31 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 	}
 
 
-//pid == -1: wait for any child thread 
-//pid > 0: wait for a thread with process group pid
 
+	
+	//pid > 0: wait for a thread with process group pid
 	if(pid > 0) {
 		child_proc = fetch_proc(pid);
 	}
+	//pid == -1: wait for any child thread 
 	else {
 		child_proc = fetch_gen_proc();
 	}
-	lock_acquire(child_proc->exit_lock);
-	cv_wait(child_proc->exit_cv, child_proc->exit_lock);
-	lock_release(child_proc->exit_lock);
 
-	/*"Take Care Of" child thread?*/
+	if(child_proc == NULL) {
+		*retval = -1;
+		return EINVAL;
+	}
+
+	lock_acquire(child_proc->exit_lock);
+	
+	cv_wait(child_proc->exit_cv, child_proc->exit_lock);
 
 	*status = child_proc->exitcode;
 
+	lock_release(child_proc->exit_lock);
 
-/*on success, returns the process ID of  the  child  whose  state  has changed;  
-if  WNOHANG was specified and one or more child(ren) specified by pid exist, 
-but have not yet changed state, then 0 is returned.   On  error,  -1  is 
-returned
 
-ECHILD (for  waitpid() or waitid()) The process specified by pid (waitpid()) or
-idtype and id (waitid()) does not exist or is not a child of the calling
-process.  (This can happen for one's own child if the action for SIGCHLD
-is set to SIG_IGN.  See also the Linux Notes section about threads.)
-*/
 
 
 	proc_destroy(child_proc);
@@ -171,25 +166,23 @@ is set to SIG_IGN.  See also the Linux Notes section about threads.)
 }
 
 
-
+//terminates the calling process "immediately"
 int sys__exit(int retcode) {
 /*
-The  function  _exit()  terminates the calling process "immediately".  Any open
-file descriptors belonging to the process  are  closed;  any  children  of  the
+open file descriptors belonging to the process  are  closed;  any  children  of  the
 process  are  inherited  by process 1, init, and the process's parent is sent a
 SIGCHLD signal.
-
-The value status is returned to the parent process as the process's  exit  sta-
-tus, and can be collected using one of the wait(2) family of calls.
 */
 
 	//Close open files and any taken file descriptors
 		//vfs_close(vn);?
 
 	lock_acquire(curproc->exit_lock);
+
 	cv_broadcast(curproc->exit_cv, curproc->exit_lock);
 	gen_exit_signal();
 	curproc->exitcode = retcode;
+
 	lock_release(curproc->exit_lock);
 
 	thread_exit();
