@@ -68,6 +68,7 @@ int sys_read(int fd, userptr_t user_buffer, size_t buflen, int32_t *retval);
 int sys_write(int fd, userptr_t user_buffer, size_t nbytes, int32_t *retval);
 int sys_lseek(int fd, off_t pos, int whence, int32_t *retval);
 int sys_dup2(int oldfd, int newfd, int32_t *retval);
+int sys_chdir(userptr_t user_filename);
 
 int sys_getpid(int32_t *retval);
 int sys_fork(struct trapframe *tf, int *retval);
