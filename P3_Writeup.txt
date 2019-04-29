@@ -1,0 +1,134 @@
+Team: Thread Robin… YUM
+Members: Chris Short, Wils McCreight
+Project title: The project Chris chose over his last track meet of the year, and the project Wils chose over his friend’s 21 bday party as well as a DC United soccer game with his Dad and best friend.
+
+[----------------------------------------------------]
+
+Our implementation as it currently stands does not work. It does compile, however, and we ask that this project is graded on our design implementations rather than a working implementation of our designs. We have spending more than 4 hours a day on this project over the past 13 days since the specs were released, with over 10 hours a day in the past 3 days. All of this was in combination with end of the year work that was also due for other classes this past week. The entirety of the first week was spent attempting to understand the code base with when still a large part of the second week also focused on the code base understanding. Much credit goes to Ali in the class piazza page as well as the friendly verbal collaboration that took place with us, Meg & Jeremy, and Liz & Conrad. We all will certainly remember our time together all struggling together on this project in McGlothin along. With the amount we have learned and the rate in which learned in the past 4 days alone, if we were given another day to solely devote to this project we feel that we could have produced an implementation that works well. Many hours in the past 3 days were also spend troubleshooting compilation errors that resulted from seemingly every possible error condition in c with a large majority of errors arising from pointers. We both agree that after this project we both still have a strong love/hate relationship with pointers: with great power comes great responsibility. Now, onto our design document:
+
+[----------------------------------------------------]
+
+Files we changed:
+src/kern/include/limits.h
+src/kern/include/kern/limits.h
+src/kern/include/proc.h
+src/kern/include/syscall.h
+src/kern/arch/mips/syscall/syscall.c
+src/kern/proc/proc.c
+src/kern/kern/kern.conf
+
+Files we made:
+src/kern/include/filetable.h
+src/kern/syscall/file_syscalls.c
+src/kern/syscall/proc_syscalls.c
+
+[----------------------------------------------------]
+
+The basic implementation of a system call involves modifying at least these four files: 
+src/kern/arch/mips/syscall/syscall.c
+src/kern/include/syscall.h
+src/kern/syscall/[c file containing system call implementation]
+src/kern/conf/kern/conf
+
+src/kern/arch/mips/syscall/syscall.c is where the system calls are made after leaving the trap handler. tf->tf_v0, which is an abstract representation of a MIPS register, contains the system call number that corresponds to the system call that was called in userland. The large switch statement in syscall() is where the mapping from system call number to actual actually calling the corresponding system call is made. Here, each system call must receive its necessary parameters. To determine each system call’s appropriate parameters, src/userland/include/unistd.h has the prototypes for the userland version of the kernel land system call’s. While the kernel lands prototypes will end up looking different than the userland prototypes they can be used to help not only determine the parameters for their kernel counterparts but also what MIPS registers store which parameter. For example, the userland prototype for dup2() has two parameters which are both ints that represents file descriptor while the kernel land prototype for dup2() has three parameters: two ints that represent file descriptors and another that is of type int32_t which is actually used to store the return value for the kernel’s dup2() system call. dup2() is supposed to return the new file descriptor for the file. This is needed because the actual system call only returns an int with is used to see if the system call failed in some way. This retval variable is then stored in tf->tf_v0 which is the register responsible for the returned value that the userland call receives. tf->tf_a0, tf->tf_a1, tf->tf_a2, tf->tf_a3 are the registers that are responsible for passing in parameters from userland to kernel land. If a system call requires more than four requirements or if it requires more than 32 bits, which is the size of the registers, then that parameter is pushed into the stack for the kernel to read in. 
+All of the prototypes for the system calls that are in the syscalls.c file, and are therefore implemented, are found in the src/kern/include/syscall.h header file. 
+The implementations of the system calls are found in src/kern/syscall where they are either in file_syscalls.c, proc_syscalls.c and time_syscalls.c, the latter of which we did not implement. 
+
+[----------------------------------------------------]
+
+getpid()
+Our actual implementation of sys_getpid was only two lines: one sets the retval variable to current process’s pid, and another line that returns zero since this system call cannot fail. This system call, however, required that we implement a pid table and also track, assign, and release pids. This was all implemented in proc.c and subsequently proc.h. In proc.h we added an int field to the proc struct which is to store the pid of the its corresponding process. Prototypes of three helper functions were also added to proc.h which are implemented in proc.c. These helper functions are used to either set, clear, or test bits in a int that is stored in an array. Each bit in each int is used to represent a pid. If a pid is available then it the bit in the corresponding location in the int is 0. If a pid is taken then that bit is set to 1 and it’s index is stored in that int field in the proc struct. The one parameter for each of the these functions is the pid that is being set, cleared, or tested. Test_bit returns a 1 if the bit is set, and it returns a 0 is the bit is not set. The pid_table is a global variable that holds the 32 ints and since each int is 32 bits long then they add up to a total of 1024 possible pids where the 0th bit is always the kernel process’s pid. This pid_table (array of ints) is allocated in the proc_bootstrap function which is called at OS boot time. This function creates the kernel’s process as well as allocates heap space for the pid table. The pid table is also set to all zeros so before the kernel proc is created since at that time no processes should exist. Moving to the proc_create() function, the function checks to see if the process that is being created’s name is [kernel] and if it is then the first pid is assigned which should be 0 and so the first bit in the first in the array is set to 0. This bit should never be cleared. If somehow the 0 pid is already taken then the system panics as this should never be the case. Otherwise, it sets the first bit, sets the last_successful_pid to = 0 and sets the proc’s pid to 0. The last_successful bit is used as the position to start check pids in increasing order until the next unused pid is found. If the process being created is the kernel process then each pid after the last_successful_pid is tested until one that is not set is found. If one is not found then in our current implementation the kernel panics. We did not have time to change this. What should happen is that since the kernel should not panic if it runs out of pids, it should have each process that cannot find a pid to wait on a CV until a pid is available. The variable named pids_checked is an int that is used to check if 1024 bits have been checked. As soon as 1024 bits have been checked our current implementation causes the kernel to panic and as stated above, this is not the correct implementation. If a pid is found then the corresponding bit in the array of ints is set and the proc struct stores that pid value as well.
+
+fork()
+Our implementation of fork unfortunately is not finished. In this write up we will explain the intended functionality of the system call and give an overview of the code needed for it to work. The fork function creates a new process. This allows us to implement things like multiprocessing in our operating system. The return value is the zero in the new (child) process is 0, and in parent (calling) process the return value is the pid of the newly created process. On error the return value is -1. The parameters of the function are a trapframe struct ‘tf’ and an int pointer retval. The bulk of the work done in fork involves copying memory. The passed in trapframe is basically the memory state which we will use to create a new process. We create a new trapframe struct into which we copy the information from our parameter trapframe using memcpy(). We actually create the new process using thread_fork(). Because we are using thread_fork we create a new thread struct and initialize it so that we can use it to create our new process. We the new thread into thread_fork as well as our new trapframe which we use as the starting location of our new thread/process. If thread_fork returns anything other than 0 we terminate with an error code. Otherwise we have theoretically created a new process with the exact same state as the calling process. The last thing we do is set the pointer retval equal to the pid field of the new process. As a reminder, the new process itself will set that value to zero. It is only in the calling (parent) process where the return is the child’s pid.
+
+execv()
+Our implementation of execv unfortunately is not finished. In this write up we will explain the intended functionality of the system call and give an overview of the code needed for it to work. The execv system call replaces the current process image with a new process image. What this basically means is you are launching a new program within the current one. This takes the memory work done in fork and goes crazy. The parameters passed in are a constant char pointer called ‘path’, a char double pointer called ‘args’ and an int pointer called ‘retval’. ‘retval’ is used to report errors. If an argument is invalid, if we run out of space or if a function called within execv returns an error then it will be set to the appropriate value. ‘path’ and ‘args’ are the important parameters of this function. ‘path’ is the relative file path to the function being launched and ‘args’ is the argument flags to consider. Much of the functionality mirrors the runprogram function with the addition of memory management. After checking that the inputs are valid we use vfs_open (virtual-file-system open) to open the program pointed at by the supplied file path and store it in a vnode struct. We then use the load_elf function to load our vnode program into memory at a supplied entry point. The next portion is important and the part which I was unable to fully grasp before submitting this project. We make use of the copyin and copyout functions in copyinout.c in order to place the program in the proper memory space. This is where the differences between user space and kernel space become important, because the program must be loaded into user space but we as a system call are the kernel space. Using copyout and the stack we will appropriately place the new program in user space and then launch it in user mode. The function should not return, because when it accomplishes its task it will no longer be the executing program.
+
+waitpid()
+The linux man page for waitpid reads The waitpid() system call suspends execution of the  calling  process  until  a child specified by pid argument has changed state. The default implementation and what we mimicked here takes in an int32_t called ‘pid’, an int pointer called ‘status’, an int called ‘options’ and an int pointer called ‘retval’. The default behavior is for the calling process to wait for a certain process to exit. The kind of state you are waiting for can be changed by inputting different values for ‘option’ but we chose to only track the exit state in our implementation. The thread you are waiting for is determined by the ‘pid’ parameter. The possible inputs for pid are < -1, == -1, == 0, or > 0. If pid < -1, then the calling process wants to wait for a thread with a process ID group equal to the absolute value of ‘pid’. We did not implement process ID groups in this project so that input is unneeded. If pid == 0 then it is waiting for a process with the same id as the calling process to exit. This means a child process of the calling process. Because our implementation of fork was non-functional this input is also unneeded. If pid > 0, then we are simply being given the pid of the process of which we are waiting to exit. In order to wait for the process we fetch its proc struct and put ourselves to sleep on its condition variable and lock. That condition variable will be broadcasted to when the process exits in sys_exit. When it does we will wake. We store the exit code of the waited for process in our ‘status’ parameter. Lastly we destroy the process which has just exited with proc_destroy(). If pid == -1, then we are waiting for any possible process to change state (exit in this case). The only difference in our functionality for this case as opposed to pid > 0 is that we have a seperate global process struct call ‘gen_child_p’ which has a condition variable that is signaled any time a process exits. We wait on that conditional variable instead of a pid specific one.
+
+_exit()
+The linux man page for exit reads: Terminate  the  process, returning returnCode to the system as the exit status. If returnCode is not specified then it defaults to 0. This is fairly self explanatory, when exit is called everything shuts down. Any open files are closed, and file descriptors in use are freed, and any processes waiting on it to exit with waitpid are signaled. The only input parameter is an int called ‘retcode’. If it is specified then the process needs to specify the error code it exited with to anyone listening. Otherwise it exits quietly. Because we are playing with condition variables, the first thing the code does is lock_acquire() on a lock called exit_lock which is a field of the current running process. It then iterates through the file table of the current process and closes any open files using sys_close. Next it broadcasts to the cv_exit condition variable of the current process, meaning it tells any processes waiting on it to wake up. It also calls a function we made called gen_exit_signal which we alluded to in the description of waitpid. This function is used to wake up processes that are waiting on any process to exit in order to wake up. It broadcasts to the condition variable of a permanent global process struct called gen_child_p (general child process). Next it sets the exitcode field of the current process proc struct equal to the passed in retcode parameter. This will be retrieved later in waitpid. Finally we release the exit lock we have been holding and call threa_exit() which finally truly shuts us down.
+
+open()
+The open() system call takes the pathname of a file, the flags associated with the open and the retval so that sys_open set it equal to the file descriptor for that file. The pathname passed in a s userptr_t since it is a pointer to the userland stack. This allows the kernel to know where to look for this address in memory. In order to implement this function call we created both a system wide file table as well as a file table for each process. The system file table is allocated in the proc.c in the proc_bootstrap function when the kernel process is created. This file table is declared in the header file include/filename.h which allows to be a global, system-wide variable. This is also where the filetable_entry struct is. Our current implementation is such that our per-process file tables are simple arrays of double pointers. They point to pointers in the system file table where each pointer in the system file table then points to a filetable_entry struct which stores the flags that were passed in during the call of the system call, the file descriptor in the system file table, and the vnode which is an abstraction of the actual file in memory. The flag that was passed in is one of three macros that denotes whether the process is being read from, written to, or both from the file. Vnodes are the unix abstraction of actual files in memory. One thing that our implementation does not have that this struct should have is the stored offset as a off_t type which denotes where the current offset/location in the file that was last read from or written to. Going back to the sys_open() function, a file table entry is allocated and then a helper function, open_file, is called. This function calls vfs_open which actually ‘opens’ the file and returns a pointer to the vnode that represents that file. A pointer to this vnode as well as the flags are stored in the file table entry struct. open_file() then iterates through the system file table starting at 3, since stdin, stdout, and stderr occupy the first 3 entries, and finds the first file descriptor not in use and sets that pointer in the system filetable array to that file table entry. When this function returns sys_open then finds the first available file descriptor in the current process’s filetable and sets that pointer to the pointer in the system file table array. If a file descriptor was not set then errno is return as a non 0. Lastly, the chosen file descriptor for the file in the process file table is stored in the address of the retval pointer. 
+
+close()
+The sys_close() system call checks to make sure that the fd that was passed in exists in the current process’s file table. If it is then the helper function, close_file, is call. In close_file, vfs_close is called which takes the pointer to the vnode object that was stored in the process file table’s entry and ‘closes’ that file. The file table entry in the system file table is freed and the pointer in the file table array is set to NULL. After close_file returns, the pointer to the file’s entry process’s file table is set to NULL and then it returns.
+
+read()
+The sys_read() system call makes sure that the fd that was passed in exists in the current process’s file table. While this function was not completed in it entirety, an idea is had for the its implementation. VOP_READ is the macro that carries out the read. We initialize the uio struct and iovec struct by calling uio_kinit.  uio->uio_segflg should also be set to UIO_USERSPACE. VOP_READ is then called. The new file offset is set as the uio_resid value after the VOP_READ. To calculate the number of bytes read you subtract the uio_resid field from buflen, we think this results would return the correct length of bytes read. We did not have time to make this atomic to other IO processes.
+
+write()
+The sys_write() system call makes sure that the fd that was passed in exists in the current process’s file table. In our implementation write() is structurally identical to read() aside from the specific write calls. Likewise, we did not have time to make this atomic to other IO processes.
+
+lseek()
+The sys_lseek() system call makes sure that the fd that was passed in exists in the current process’s file table. It also makes sure that the whence int is set to one of three macros. With the given offset, the offset of the file in both of the file tables is updated. The 64 bit offset was not read in properly, nor was it returned properly. The returned offset is supposed to pushed into the stack for the userland lseek() function to pop.
+
+dup2()
+The sys_dup2() system call makes sure that the oldfd that was passed in exists in the current process’s file table and it makes sure that the newfd supplied is available. If it is not then it closes that file. A new filetable entry struct is made and all of the guts of the oldfd entry are copied over to this new struct. A new file descriptor in the system file table is then looked for and then the entry pointer in that position in the file table array is set to point at the new entry struct. Then the new entry in the process file table is set to point at the system file table’s entry’s pointer. The newfd is then returned.
+
+chdir()
+Vfs_chdir is called with the supplied pathname. We feel that there should be more to do here since this seems too simple outside of making this atomic which was not done as we could not figure out where to store the locks.
+
+__getcwd()
+Getcwd uses the function vfs_getcwd to load the name of the current working directory into a uio struct. It then uses copyoutstr to print out the directory name.
+
+[----------------------------------------------------]
+
+Questions:
+1. What are the ELF magic numbers?
+The ELF magic numbers are four bytes at the beginning of a 32 bit ELF files; 0x7F, 45, 4c, and 46. 0x7F is the delete key, the next three are ‘E’, ‘L’ and ‘F’ respectively. The os checks these numbers to see if the executable passed in is a 32 bit ELF file and therefore os161 compatible. If it is not then it does not run it
+
+2. What is the difference between UIO_USERISPACE and UIO_USERSPACE? When
+should one use UIO_SYSSPACE instead?
+Line 102 of /src/kern/syscall/loadelf.c in the load_segment function reads:
+u.uio_segflg = is_executable ? UIO_USERISPACE : UIO_USERSPACE;
+If the loaded information is executable then it is code and should be place into UIO_USERISPACE. If it is not executable then it is data, and placed in UIO_USERSPACE. UIO_SYSSPACE is the kernel space, used for kernel operations
+
+3. Why can the struct uio that is used to read in a segment be allocated on the stack in load_segment() (i.e., where does the memory read actually go)?
+This is because the uio struct stores the offset in memory of the object, as well as the size of the data in memory to either read or write.
+
+4. In runprogram(), why is it important to call vfs_close() before going to usermode?
+When runprogram() switches to usermode you do not want the file to still be open by the kernel. This means that the user would effectively have kernel privileges on the file since kernel was the one who opened it.
+
+5. What function forces the processor to switch into usermode? Is this function machine dependent?
+Mips_usermode calls a function called asm_usermode which is defined in an  assembly source code file. [Yes, this is machine dependent because this function is written in MIPS assembly and would only work on a machine based on MIPS architecture]
+
+6. In what file are copyin and copyout defined? memmove? Why can't copyin and copyout be implemented as simply as memmove?
+/src/common/libc/string/memmove.c
+/src/kern/vm/copyinout.c
+memmove is defined in memmove.c. copyin and copyout are defined in copyinout.c. memmove simply shifts a block in memory from a source to a destination using memcpy(). copyin and copyout have the more complicated job of moving memory between kernel space and user space.
+
+7. What (briefly) is the purpose of userptr_t?
+userptr_t is a pointer to a one byte struct which stores the address of a point in memory. It is specifically used to store memory pointers supplied by the user code.
+
+8. What is the numerical value of the exception code for a MIPS system call?
+The mips exception codes are given in kern/arch/include/trapframe.h. The error code for a system call is the enum EX_SYS which is equal to 8.
+
+9. How many bytes is an instruction in MIPS? (Answer this by reading
+syscall() carefully, not by looking somewhere else.)
+4 bytes
+
+10. Why do you "probably want to change" the implementation of
+kill_curthread()?
+The current implementation does not know how to handle the case where the current thread cannot be killed and the current solution is for the kernel to panic.
+
+11. What would be required to implement a system call that took more than 4 arguments?
+To have additional arguments we would need to store and pull them from the stack.
+
+12. What is the purpose of the SYSCALL macro?
+build/userland/lib/libc/syscalls.S
+The SYSCALL macro is defined in syscalls.S. SYSCALL constructs assembly code specific to the unistd.h system call symbol passed in. We load in the syscall number and the register where we’ll find it and the asseembly jumps to the relevant code.
+
+13. What is the MIPS instruction that actually triggers a system call? (Answer this by reading the source in this directory, not looking somewhere else.)
+There is actually a mips instruction called syscall which is jumped to when a system call is made. This can be seen in build/userland/lib/libc/syscalls.S.
+
+14. After reading syscalls-mips.S and syscall.c, you should be prepared to
+answer the following question: OS/161 supports 64-bit values; lseek()takes and returns a 64-bit offset value. Thus, lseek() takes a 32-bit file handle (arg0), a 64-bit offset (arg1), a 32-bit whence (arg3), and needs to return a 64-bit offset value. In void syscall(struct trapframe *tf) where will you find each of the three arguments (in which registers) and how will you return the 64-bit offset?
+The three arguments will be found in the trapframe registers. The 32 bit file handle will be in tf->tf_a0. The 64 bit offset will actually be stored in both tf->tf_a1 and tf->tf_a2 because each register can only hold 32 bits. This means that the 32 bit whence will be returned via the stack. This is related to question 11 about passing in 4 arguments. The stack needs to be involved when passing in more than 3 arguments or when we don’t have the registers to hold the size of the arguments. 
+
+
+
+
