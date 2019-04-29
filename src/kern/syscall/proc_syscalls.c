@@ -11,6 +11,7 @@
 #include <proc.h>
 #include <filetable.h>
 #include <kern/errno.h>
+#include <synch.h>
 
 int sys_getpid(int32_t *retval) {
     *retval = (int32_t)curproc->pid;
@@ -21,25 +22,25 @@ int sys_getpid(int32_t *retval) {
 int sys_fork(struct trapframe *tf, int *retval) {
   
 	(void)tf;
-	//int32_t id;
 	int id;
 	sys_getpid(&id);
-	
 
-	*retval = -1;
+
 	//error = thread_fork(...);
+	*retval = -1;
+
+	//*retval = new_thread->pid;
 	return 0;
 }
 
 
 
-/*
-int sys_execv(const char *path, char *const argv[]) {
-   */
 
-
-
-
+int sys_execv(const char *path, char **args, int *retval) {
+   
+	(void)path;
+	(void)args;
+	(void)retval;
 /*
 	struct addrspace *as;
     struct vnode *v;
@@ -82,7 +83,7 @@ int sys_execv(const char *path, char *const argv[]) {
 /*	vfs_close(v);
 */								   
 	/* Define the user stack in the address space */
-/*	result = as_define_stack(as, &stackptr);
+/*	result = as_define_stack(as, &stackptr)	if (result) {
 	if (result) {
 */		/* p_addrspace will go away when curproc is destroyed */
 /*		return result;
@@ -96,15 +97,11 @@ int sys_execv(const char *path, char *const argv[]) {
 	/* enter_new_process does not return. */
 //	panic("enter_new_process returned\n");
 //	return EINVAL;
-
-
-
-
-/*
-
 	return 0;
 }
-*/
+
+
+
 
 
 // Wait for a certain thread to exit
@@ -113,8 +110,7 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 	
 
-	struct proc *proc;
-	(void)proc;
+	struct proc *child_proc;
 
 	if(options) {
 		kprintf("waitpid: options attempted but not implemented\n");
@@ -142,16 +138,19 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 //pid == -1: wait for any child thread 
 //pid > 0: wait for a thread with process group pid
 
-
-
-
-//	lock_acquire(/* a lock */);
-//	cv_wait(/*a cv!*/, /*a lock*/);
-//	lock_release(/*a lock!*/);
+	if(pid > 0) {
+		child_proc = fetch_proc(pid);
+	}
+	else {
+		child_proc = fetch_gen_proc();
+	}
+	lock_acquire(child_proc->exit_lock);
+	cv_wait(child_proc->exit_cv, child_proc->exit_lock);
+	lock_release(child_proc->exit_lock);
 
 	/*"Take Care Of" child thread?*/
 
-//	*status = proc->exitcode;
+	*status = child_proc->exitcode;
 
 
 /*on success, returns the process ID of  the  child  whose  state  has changed;  
@@ -166,13 +165,7 @@ is set to SIG_IGN.  See also the Linux Notes section about threads.)
 */
 
 
-
-	//struct proc *p;
-	//*p = proc_create("wow");
-	//proc_destroy(p);
-
-	(void)status;
-	//set status equal to the exit code of the exiting program
+	proc_destroy(child_proc);
 
 	return 0;
 }
@@ -180,7 +173,6 @@ is set to SIG_IGN.  See also the Linux Notes section about threads.)
 
 
 int sys__exit(int retcode) {
-	
 /*
 The  function  _exit()  terminates the calling process "immediately".  Any open
 file descriptors belonging to the process  are  closed;  any  children  of  the
@@ -191,17 +183,15 @@ The value status is returned to the parent process as the process's  exit  sta-
 tus, and can be collected using one of the wait(2) family of calls.
 */
 
-
 	//Close open files and any taken file descriptors
 		//vfs_close(vn);?
-	//"Take Care Of" children threads?
 
-	//Signal parent that I'm dyong?
-
-	//Wake up any processes waiting on it from waitpid?
-	
+	lock_acquire(curproc->exit_lock);
+	cv_broadcast(curproc->exit_cv, curproc->exit_lock);
+	gen_exit_signal();
 	curproc->exitcode = retcode;
-	
+	lock_release(curproc->exit_lock);
+
 	thread_exit();
 	//Should not reach past this (i.e. never returns)
 	return 0;
