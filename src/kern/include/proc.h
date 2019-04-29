@@ -44,7 +44,6 @@ struct addrspace;
 struct thread;
 struct vnode;
 
-
 /*
  * Process structure.
  *
@@ -76,6 +75,8 @@ struct proc {
 	/* add more material here as needed */
     int pid;   
 	int exitcode;
+	struct cv *exit_cv;
+	struct lock *exit_lock;
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
@@ -105,6 +106,11 @@ struct addrspace *proc_setas(struct addrspace *);
 void set_bit(unsigned int k);
 void clear_bit(unsigned int k);
 int test_bit(unsigned int k);
+void set_proc_entry(struct proc *p);
+void clear_proc_entry(unsigned int k);
+struct proc* fetch_proc(unsigned int k);
+struct proc* fetch_gen_proc(void);
+void gen_exit_signal(void);
 
 
 

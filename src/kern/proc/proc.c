@@ -48,19 +48,20 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <synch.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
 struct proc *kproc;
-
+struct proc *gen_child_p;
 /*
  * The pointer to the pid table; array of bits that where the index is
  * the pid. Array is actually an array of ints but each bit of each int is
  * an index
  */
 unsigned int *pid_table;
-
+struct proc* *proc_table;
 /*
  * This is a int that is the last successful pid insertion
  */
@@ -134,6 +135,12 @@ proc_create(const char *name)
         proc->pid = last_successful_pid;
     }
 
+
+
+	proc->exit_cv = cv_create("exit_cv");
+	proc->exit_lock = lock_create("exit_lock");
+
+	set_proc_entry(proc);
 	return proc;
 }
 
@@ -219,9 +226,13 @@ proc_destroy(struct proc *proc)
 
     
     clear_bit(proc->pid);    // flip the bit in the pid_table
+	clear_proc_entry(proc->pid);
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
+
+	cv_destroy(proc->exit_cv);
+	lock_destroy(proc->exit_lock);
 
 	kfree(proc->p_name);
 	kfree(proc);
@@ -240,13 +251,13 @@ proc_bootstrap(void)
 
     /* Allocate for the pid_table */
     pid_table = kmalloc(TABLESIZE*sizeof(unsigned int));
-
+	proc_table = kmalloc(TABLESIZE*sizeof(struct proc*));
     /* Initialze all of the bits in the pid table to 0  */
     for(int i = 0; i < TABLESIZE; i++) {
         pid_table[i] = 0;
     }
 
-
+	gen_child_p = proc_create("[gen proc]");	
 }
 
 /*
@@ -280,6 +291,33 @@ test_bit(unsigned int k)
         return 0; // k-th bit is 0  
     }
 }
+
+void
+set_proc_entry(struct proc *p) {
+	proc_table[p->pid/32] = p;	
+}
+
+void
+clear_proc_entry(unsigned int k) {
+	proc_table[k/32] = (struct proc*)kmalloc(sizeof(struct proc));
+}
+
+struct proc * 
+fetch_proc(unsigned int k) {
+	return proc_table[k/32];
+}
+
+struct proc *
+fetch_gen_proc() {
+	return gen_child_p;
+}
+
+void
+gen_exit_signal() {
+	cv_broadcast(gen_child_p->exit_cv, gen_child_p->exit_lock);
+}
+
+
 
 /*
  * Create a fresh proc for use by runprogram.

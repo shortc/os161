@@ -63,6 +63,7 @@ int sys___getcwd(int32_t *retval);
 /*Process System Calls */
 int sys_getpid(int32_t *retval);
 int sys_fork(struct trapframe *tf, int *retval);
+int sys_execv(const char *path, char **args, int *retval);
 int sys_waitpid(int32_t pid, int *status, int options, int *retval);
 int sys__exit(int retcode);
 #endif /* _SYSCALL_H_ */
