@@ -49,6 +49,8 @@
 #include <addrspace.h>
 #include <vnode.h>
 #include <synch.h>
+#include <filetable.h>
+
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -141,6 +143,13 @@ proc_create(const char *name)
 	proc->exit_lock = lock_create("exit_lock");
 
 	set_proc_entry(proc);
+
+    proc->entry = kmalloc(OPEN_MAX*sizeof(struct filetable_entry**));
+
+    for(int y = 0; y < OPEN_MAX; y++) {
+        proc->entry[y] = NULL;
+    }
+
 	return proc;
 }
 
@@ -257,7 +266,17 @@ proc_bootstrap(void)
         pid_table[i] = 0;
     }
 
+
 	gen_child_p = proc_create("[gen proc]");	
+
+    filetable = kmalloc(FILE_MAX*sizeof(struct filetable_entry*));
+    
+    for (int y = 0; y < OPEN_MAX; y++) {
+        filetable[y] = NULL;
+    }
+
+
+
 }
 
 /*
