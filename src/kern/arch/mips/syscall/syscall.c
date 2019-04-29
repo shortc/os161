@@ -140,7 +140,7 @@ syscall(struct trapframe *tf)
         break;
 
         case SYS___getcwd:
-        err = sys___getcwd(&retval);
+        err = sys___getcwd((char *)tf->tf_a0, tf->tf_a1, &retval);
         break;
         
 		/* Process System Calls */

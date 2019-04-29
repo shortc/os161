@@ -13,20 +13,23 @@
 #include <proc.h>
 #include <kern/seek.h>
 #include <kern/errno.h>
+#include <copyinout.h>
 
-int sys___getcwd(int32_t *retval) {
+int sys___getcwd(void* buffer, size_t buffer_length, int32_t *retval) {
 
 	struct uio uio;
+	size_t size;
 	int result;
+
+	char *name = (char*)kmalloc(buffer_length);
 
 	result = vfs_getcwd(&uio);
 	
 	if(result) {
 		kprintf("Error getting current working directory!\n");
 		return -1;
-	}
-
-
+	};	
+	copyoutstr((const void *) name, (userptr_t) buffer, buffer_length, &size);
 	*retval = (int32_t) NULL;
 
 
