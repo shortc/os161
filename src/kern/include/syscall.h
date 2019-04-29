@@ -60,7 +60,7 @@ __DEAD void enter_new_process(int argc, userptr_t argv, userptr_t env,
 int sys_reboot(int code);
 
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
-int sys___getcwd(int32_t *retval);
+int sys___getcwd(void* buffer, size_t buffer_length, int32_t *retval);
 
 int sys_open(userptr_t user_filename, int flags, int32_t *retval);
 int sys_close(int fd);

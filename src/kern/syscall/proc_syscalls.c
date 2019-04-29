@@ -12,6 +12,7 @@
 #include <filetable.h>
 #include <kern/errno.h>
 #include <synch.h>
+#include <machine/trapframe.h>
 
 int sys_getpid(int32_t *retval) {
     *retval = (int32_t)curproc->pid;
@@ -21,14 +22,43 @@ int sys_getpid(int32_t *retval) {
 
 int sys_fork(struct trapframe *tf, int *retval) {
   
-	(void)tf;
-	int id;
-	sys_getpid(&id);
+	int result;
+	struct thread *new_thread;
+	struct proc *new_proc;
+	struct trapframe *new_tf;
+
+	//struct proc *new_proc;
+
+	/*
+	*new_proc = proc_create("[f_proc]");
+	*/
+
+	new_tf = kmalloc(sizeof(struct trapframe));
+
+	if (new_tf == NULL) {
+		return ENOMEM;
+	}
 
 
-	//error = thread_fork(...);
-	*retval = -1;
 
+	memcpy(new_tf, tf, sizeof(struct trapframe)); 
+
+	/*
+	result = thread_fork(curthread->t_name, (void *)new_tf, 0, NULL , NULL);
+	*/
+
+	/*
+	as_copy	
+	*/
+
+	/*
+	*retval = new_proc->pid;
+	*/
+
+	(void)result;
+	(void)new_thread;
+	(void)new_proc;
+	(void)retval;
 	//*retval = new_thread->pid;
 	return 0;
 }
@@ -168,19 +198,22 @@ int sys_waitpid(int32_t pid, int *status, int options, int *retval) {
 
 //terminates the calling process "immediately"
 int sys__exit(int retcode) {
-/*
-open file descriptors belonging to the process  are  closed;  any  children  of  the
-process  are  inherited  by process 1, init, and the process's parent is sent a
-SIGCHLD signal.
-*/
-
-	//Close open files and any taken file descriptors
-		//vfs_close(vn);?
+	
+	//int fd;
 
 	lock_acquire(curproc->exit_lock);
 
+	//Close open files and any taken file descriptors
+	for (int fd = 0; fd < OPEN_MAX; fd++) {
+		if(curproc->entry[fd] == NULL) {
+			sys_close(fd);
+		}
+	}
+	//Signal anyone waiting on this pid
 	cv_broadcast(curproc->exit_cv, curproc->exit_lock);
+	//Signal anyone waiting on any pid
 	gen_exit_signal();
+	//Register the exit code
 	curproc->exitcode = retcode;
 
 	lock_release(curproc->exit_lock);

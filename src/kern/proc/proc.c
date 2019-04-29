@@ -253,12 +253,7 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
-	kproc = proc_create("[kernel]");
-	if (kproc == NULL) {
-		panic("proc_create for kproc failed\n");
-	}
-
-    /* Allocate for the pid_table */
+	/* Allocate for the pid_table */
     pid_table = kmalloc(TABLESIZE*sizeof(unsigned int));
 	proc_table = kmalloc(TABLESIZE*sizeof(struct proc*));
     /* Initialze all of the bits in the pid table to 0  */
@@ -266,6 +261,12 @@ proc_bootstrap(void)
         pid_table[i] = 0;
     }
 
+	kproc = proc_create("[kernel]");
+	if (kproc == NULL) {
+		panic("proc_create for kproc failed\n");
+	}
+
+    
 
 	gen_child_p = proc_create("[gen proc]");	
 
